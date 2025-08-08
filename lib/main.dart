@@ -56,10 +56,13 @@ class _MyHomePageState extends State<MyHomePage>
     'Combo': [],
   };
 
+  // Idle rewards timestamp
+  int? _lastSavedMillis;
+
   // === Helper to format displayed whole numbers ===
   String _fmtInt(num v) => v.toInt().toString();
 
-  // === Upgrades (renamed to science/atom theme) ===
+  // === Upgrades (science/atom theme) ===
   final List<Map<String, dynamic>> _upgrades = [
     {'label': 'Ion Trap', 'color': Colors.teal, 'baseCost': 50, 'value': 0.1, 'count': 0, 'type': 'rate'},
     {'label': 'Fusion Chamber', 'color': Colors.orange, 'baseCost': 225, 'value': 0.2, 'count': 0, 'type': 'rate'},
@@ -86,6 +89,8 @@ class _MyHomePageState extends State<MyHomePage>
     WidgetsBinding.instance.addObserver(this);
     _initializeAchievements();
     _loadData().then((_) {
+      _applyIdleRewardsIfAny(); // grant offline earnings on startup
+      _saveData();
       _startTimer();
       _autoSaveTimer = Timer.periodic(const Duration(minutes: 2), (_) => _saveData());
       _checkAchievements();
@@ -272,12 +277,35 @@ class _MyHomePageState extends State<MyHomePage>
     _totalTaps = prefs.getInt('totalTaps') ?? 0;
     _totalUpgrades = prefs.getInt('totalUpgrades') ?? 0;
     _totalCurrencyEarned = prefs.getDouble('totalCurrencyEarned') ?? 0.0;
+    _lastSavedMillis = prefs.getInt('lastSavedMillis');
     final list = prefs.getStringList('unlockedAchievements') ?? [];
     _unlocked.addAll(list);
     for (int i = 0; i < _upgrades.length; i++) {
       _upgrades[i]['count'] = prefs.getInt('upgrade_count_$i') ?? 0;
     }
     setState(() {});
+  }
+
+  // Apply idle rewards once after load
+  void _applyIdleRewardsIfAny() {
+    if (_lastSavedMillis == null) return;
+    final nowMillis = DateTime.now().millisecondsSinceEpoch;
+    final elapsedSec = max(0, (nowMillis - _lastSavedMillis!) ~/ 1000);
+    if (elapsedSec <= 0 || _passiveRate <= 0) return;
+
+    final gained = _passiveRate * elapsedSec;
+    setState(() {
+      _counter += gained;
+      _totalCurrencyEarned += gained;
+    });
+
+    // Optional: brief notice of idle rewards (shown as whole number)
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Idle rewards: +${_fmtInt(gained)}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _saveData() async {
@@ -292,9 +320,14 @@ class _MyHomePageState extends State<MyHomePage>
     for (int i = 0; i < _upgrades.length; i++) {
       prefs.setInt('upgrade_count_$i', _upgrades[i]['count']);
     }
+    // Save last saved timestamp for idle rewards
+    final nowMillis = DateTime.now().millisecondsSinceEpoch;
+    prefs.setInt('lastSavedMillis', nowMillis);
+    _lastSavedMillis = nowMillis;
+
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Game saved"), duration: Duration(milliseconds: 200)),
+      const SnackBar(content: Text("Game saved"), duration: Duration(milliseconds: 150)),
     );
   }
 
@@ -365,6 +398,7 @@ class _MyHomePageState extends State<MyHomePage>
               _totalUpgrades = 0;
               _totalCurrencyEarned = 0;
               _unlocked.clear();
+              _lastSavedMillis = null;
               for (var u in _upgrades) {
                 u['count'] = 0;
               }
@@ -405,7 +439,7 @@ class _MyHomePageState extends State<MyHomePage>
                     children: [
                       // Currency shown as whole number
                       Text('💰 Currency: ${_fmtInt(_counter)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
-                      // Keep rate 1 decimal (not requested to change)
+                      // Keep rate 1 decimal for clarity
                       Text('⏱ Rate: ${_passiveRate.toStringAsFixed(1)}/sec', style: const TextStyle(fontSize: 22, color: Colors.white)),
                       // Tap value shown as whole number
                       Text('👆 Tap: ${_fmtInt(_tapValue)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
