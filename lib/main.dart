@@ -31,7 +31,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
+class _MyHomePageState extends State<MyHomePage>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   double _counter = 0;
   double _passiveRate = 0;
   double _tapValue = 1.0;
@@ -55,15 +56,29 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     'Combo': [],
   };
 
+  // === Helper to format displayed whole numbers ===
+  String _fmtInt(num v) => v.toInt().toString();
+
+  // === Upgrades (renamed to science/atom theme) ===
   final List<Map<String, dynamic>> _upgrades = [
-    {'label': 'Piggy Bank', 'color': Colors.teal, 'baseCost': 50, 'value': 0.1, 'count': 0, 'type': 'rate'},
-    {'label': 'Coin Printer', 'color': Colors.orange, 'baseCost': 225, 'value': 0.2, 'count': 0, 'type': 'rate'},
-    {'label': 'Click Multiplier', 'color': Colors.green, 'baseCost': 950, 'value': 1.0, 'count': 0, 'type': 'tap'},
-    {'label': 'Fast Fingers', 'color': Colors.red, 'baseCost': 4000, 'value': 2.0, 'count': 0, 'type': 'tap'},
-    {'label': 'Hedge Fund', 'color': Colors.blue, 'baseCost': 17000, 'value': 1.0, 'count': 0, 'type': 'rate'},
-    {'label': 'Auto-Clicker Boost', 'color': Colors.pink, 'baseCost': 70000, 'value': 3.0, 'count': 0, 'type': 'tap'},
-    {'label': 'Offshore Empire', 'color': Colors.cyan, 'baseCost': 300000, 'value': 5.0, 'count': 0, 'type': 'rate'},
+    {'label': 'Ion Trap', 'color': Colors.teal, 'baseCost': 50, 'value': 0.1, 'count': 0, 'type': 'rate'},
+    {'label': 'Fusion Chamber', 'color': Colors.orange, 'baseCost': 225, 'value': 0.2, 'count': 0, 'type': 'rate'},
+    {'label': 'Quantum Tuner', 'color': Colors.green, 'baseCost': 950, 'value': 1.0, 'count': 0, 'type': 'tap'},
+    {'label': 'Muon Gauntlet', 'color': Colors.red, 'baseCost': 4000, 'value': 2.0, 'count': 0, 'type': 'tap'},
+    {'label': 'Research Grant', 'color': Colors.blue, 'baseCost': 17000, 'value': 1.0, 'count': 0, 'type': 'rate'},
+    {'label': 'Nanobot Swarm', 'color': Colors.pink, 'baseCost': 70000, 'value': 3.0, 'count': 0, 'type': 'tap'},
+    {'label': 'Dyson Swarm', 'color': Colors.cyan, 'baseCost': 300000, 'value': 5.0, 'count': 0, 'type': 'rate'},
   ];
+
+  // ======== Floating FX support ========
+  final GlobalKey _stackKey = GlobalKey();
+  final Random _rng = Random();
+
+  late final Ticker _fxTicker;
+  double _fxTime = 0.0; // seconds
+
+  final List<_ArcParticle> _arcParticles = [];
+  final List<_FloatText> _floatTexts = [];
 
   @override
   void initState() {
@@ -73,7 +88,16 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     _loadData().then((_) {
       _startTimer();
       _autoSaveTimer = Timer.periodic(const Duration(minutes: 2), (_) => _saveData());
+      _checkAchievements();
     });
+
+    _fxTicker = createTicker((elapsed) {
+      setState(() {
+        _fxTime = elapsed.inMicroseconds / 1e6;
+        _arcParticles.removeWhere((p) => _fxTime - p.t0 >= p.duration);
+        _floatTexts.removeWhere((t) => _fxTime - t.t0 >= t.duration);
+      });
+    })..start();
   }
 
   void _initializeAchievements() {
@@ -112,11 +136,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     ];
 
     _achievements.addAll(all);
-
     for (var ach in all) {
       _grouped[ach['category']]!.add(ach);
     }
-
     final maxLength = _grouped.values.map((list) => list.length).reduce((a, b) => a > b ? a : b);
     for (var cat in _grouped.keys) {
       while (_grouped[cat]!.length < maxLength) {
@@ -201,9 +223,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                                           ),
                                         )
                                       else
-                                        Text(
+                                        const Text(
                                           '????',
-                                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                                          style: TextStyle(color: Colors.white, fontSize: 14),
                                           textAlign: TextAlign.center,
                                         ),
                                     ],
@@ -276,6 +298,46 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     );
   }
 
+  // ======== Spawn one mini atom + text at tap position ========
+  void _spawnTapFx(Offset localPos) {
+    final now = _fxTime;
+
+    final dirRight = _rng.nextBool() ? 1.0 : -1.0;
+    final lateral = lerpDouble(40, 90, _rng.nextDouble())!;
+    final rise = lerpDouble(80, 140, _rng.nextDouble())!;
+    final dur = lerpDouble(0.7, 1.0, _rng.nextDouble())!;
+    final size = lerpDouble(14, 22, _rng.nextDouble())!;
+    final bow = lerpDouble(0.3, 0.8, _rng.nextDouble())!;
+
+    _arcParticles.add(
+      _ArcParticle(
+        start: localPos,
+        control: localPos + Offset(dirRight * lateral * 0.5, -rise * bow),
+        end: localPos + Offset(dirRight * lateral, -rise),
+        t0: now,
+        duration: dur,
+        size: size,
+      ),
+    );
+
+    _floatTexts.add(
+      _FloatText(
+        start: localPos + const Offset(0, -8),
+        end: localPos + const Offset(0, -90),
+        t0: now,
+        duration: 1.0,
+        text: '+${_fmtInt(_tapValue)}',
+      ),
+    );
+  }
+
+  // Convert global to local inside our Stack
+  Offset? _globalToStackLocal(Offset globalPos) {
+    final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return null;
+    return box.globalToLocal(globalPos);
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -306,14 +368,17 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               for (var u in _upgrades) {
                 u['count'] = 0;
               }
+              _arcParticles.clear();
+              _floatTexts.clear();
             });
           }),
         ],
       ),
       body: Stack(
+        key: _stackKey,
         children: [
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF0A0E27), Color(0xFF1B1F3B)],
                 begin: Alignment.topLeft,
@@ -338,18 +403,27 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('💰 Currency: ${_counter.toStringAsFixed(1)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
+                      // Currency shown as whole number
+                      Text('💰 Currency: ${_fmtInt(_counter)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
+                      // Keep rate 1 decimal (not requested to change)
                       Text('⏱ Rate: ${_passiveRate.toStringAsFixed(1)}/sec', style: const TextStyle(fontSize: 22, color: Colors.white)),
-                      Text('👆 Tap: ${_tapValue.toStringAsFixed(1)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
+                      // Tap value shown as whole number
+                      Text('👆 Tap: ${_fmtInt(_tapValue)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
                     ],
                   ),
                 ),
               ),
             ),
           ),
+
+          // ====== Tap target (atom) ======
           Center(
             child: GestureDetector(
-              onTapDown: (_) => setState(() => _tapScale = 0.9),
+              onTapDown: (details) {
+                setState(() => _tapScale = 0.9);
+                final local = _globalToStackLocal(details.globalPosition);
+                if (local != null) _spawnTapFx(local);
+              },
               onTapUp: (_) {
                 setState(() => _tapScale = 1.0);
                 _handleTap();
@@ -362,6 +436,64 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
               ),
             ),
           ),
+
+          // ====== Floating FX rendering ======
+          // Mini atoms (arc)
+          ..._arcParticles.map((p) {
+            final t = ((_fxTime - p.t0) / p.duration).clamp(0.0, 1.0);
+            Offset lerpQ(Offset a, Offset b, double t) => Offset(
+                  a.dx + (b.dx - a.dx) * t,
+                  a.dy + (b.dy - a.dy) * t,
+                );
+            final q1 = lerpQ(p.start, p.control, t);
+            final q2 = lerpQ(p.control, p.end, t);
+            final pos = lerpQ(q1, q2, t);
+            final opacity = (1.0 - t);
+            return Positioned(
+              left: pos.dx,
+              top: pos.dy,
+              child: Opacity(
+                opacity: opacity,
+                child: Transform.translate(
+                  offset: const Offset(-10, -10),
+                  child: MiniAtom(size: p.size),
+                ),
+              ),
+            );
+          }),
+
+          // Floating +X text (whole number)
+          ..._floatTexts.map((ft) {
+            final t = ((_fxTime - ft.t0) / ft.duration).clamp(0.0, 1.0);
+            final pos = Offset(
+              lerpDouble(ft.start.dx, ft.end.dx, t)!,
+              lerpDouble(ft.start.dy, ft.end.dy, t)!,
+            );
+            final opacity = (1.0 - t);
+            return Positioned(
+              left: pos.dx,
+              top: pos.dy,
+              child: Opacity(
+                opacity: opacity,
+                child: Transform.translate(
+                  offset: const Offset(-8, -8),
+                  child: Text(
+                    ft.text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(blurRadius: 6, color: Colors.black, offset: Offset(0, 1)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+
+          // ====== Upgrades panel toggle ======
           Positioned(
             bottom: 20,
             left: 0,
@@ -369,10 +501,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
             child: Center(
               child: ElevatedButton(
                 onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                child: Text(_isExpanded ? 'Upgrades' : 'Upgrades'),
+                child: Text(_isExpanded ? 'Close Upgrades' : 'Upgrades'),
               ),
             ),
           ),
+
+          // ====== Upgrades sheet ======
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -452,6 +586,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   void dispose() {
     _passiveTimer.cancel();
     _autoSaveTimer.cancel();
+    _fxTicker.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -464,7 +599,40 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   }
 }
 
-// ===================== Atom Graphic (no assets, seamless) =====================
+// ===================== Floating FX model types =====================
+class _ArcParticle {
+  final Offset start;
+  final Offset control;
+  final Offset end;
+  final double t0;       // spawn time in seconds
+  final double duration; // seconds
+  final double size;     // logical px
+  _ArcParticle({
+    required this.start,
+    required this.control,
+    required this.end,
+    required this.t0,
+    required this.duration,
+    required this.size,
+  });
+}
+
+class _FloatText {
+  final Offset start;
+  final Offset end;
+  final double t0;       // spawn time in seconds
+  final double duration; // seconds
+  final String text;
+  _FloatText({
+    required this.start,
+    required this.end,
+    required this.t0,
+    required this.duration,
+    required this.text,
+  });
+}
+
+// ===================== Atom Graphic (main tap target, animated) =====================
 class AtomGraphic extends StatefulWidget {
   final double size;
   const AtomGraphic({super.key, required this.size});
@@ -481,7 +649,6 @@ class _AtomGraphicState extends State<AtomGraphic> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _ticker = createTicker((elapsed) {
-      // elapsed is the total time since the ticker started; it never resets.
       setState(() {
         _timeSeconds = elapsed.inMicroseconds / 1e6;
       });
@@ -546,7 +713,6 @@ class _AtomPainter extends CustomPainter {
       ..color = const Color(0xFFFFFFFF)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
-    // Helper: position an electron with angular speed (rad/s), tilt, and phase
     void drawElectron({
       required double angularSpeed, // radians per second
       required double tiltDeg,
@@ -561,7 +727,6 @@ class _AtomPainter extends CustomPainter {
       final x = a * cos(theta);
       final y = b * sin(theta);
 
-      // rotate (x, y) by tilt and translate to center
       final xr = x * cos(tilt) - y * sin(tilt);
       final yr = x * sin(tilt) + y * cos(tilt);
       final pos = Offset(center.dx + xr, center.dy + yr);
@@ -569,8 +734,6 @@ class _AtomPainter extends CustomPainter {
       canvas.drawCircle(pos, radius * 0.08, electronPaint);
     }
 
-    // Different speeds and phase offsets for visual interest
-    // (values tuned for smooth, non-synchronized motion)
     drawElectron(angularSpeed: 1.8, tiltDeg:   0, phase: 0.0,      scale: 0.98);
     drawElectron(angularSpeed: 2.3, tiltDeg:  60, phase: pi / 3,   scale: 0.98);
     drawElectron(angularSpeed: 2.8, tiltDeg: 120, phase: 2 * pi/3, scale: 0.98);
@@ -578,4 +741,53 @@ class _AtomPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _AtomPainter oldDelegate) => oldDelegate.timeSeconds != timeSeconds;
+}
+
+// ===================== Mini Atom (static) for click particles =====================
+class MiniAtom extends StatelessWidget {
+  final double size;
+  const MiniAtom({super.key, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.square(size),
+      painter: _MiniAtomPainter(),
+    );
+  }
+}
+
+class _MiniAtomPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final r = size.shortestSide * 0.5;
+
+    // Nucleus
+    final nucleus = Paint()
+      ..shader = RadialGradient(
+        colors: const [Color(0xFFB388FF), Color(0xFF7C4DFF)],
+      ).createShader(Rect.fromCircle(center: center, radius: r * 0.7))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    canvas.drawCircle(center, r * 0.45, nucleus);
+
+    // Orbits (static, faint)
+    final orbit = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = r * 0.18
+      ..color = const Color(0x66FFFFFF);
+    final rect = Rect.fromCenter(center: center, width: r * 1.6, height: r * 0.9);
+    for (final tiltDeg in [0.0, 60.0, 120.0]) {
+      final tilt = tiltDeg * pi / 180;
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(tilt);
+      canvas.translate(-center.dx, -center.dy);
+      canvas.drawOval(rect, orbit);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniAtomPainter oldDelegate) => false;
 }
