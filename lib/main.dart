@@ -59,8 +59,28 @@ class _MyHomePageState extends State<MyHomePage>
   // Idle rewards timestamp
   int? _lastSavedMillis;
 
-  // === Helper to format displayed whole numbers ===
-  String _fmtInt(num v) => v.toInt().toString();
+  // === Helpers ===
+
+  // Compact formatter: 1234 -> 1.23K, 200000 -> 200K, 44444444 -> 44.44M
+  String _fmtCompact(num v) {
+    final sign = v < 0 ? '-' : '';
+    double n = v.abs().toDouble();
+    const units = ['', 'K', 'M', 'B', 'T', 'P', 'E'];
+    int i = 0;
+    while (n >= 1000 && i < units.length - 1) {
+      n /= 1000;
+      i++;
+    }
+    final s = (n >= 100)
+        ? n.toStringAsFixed(0)
+        : (n >= 10)
+            ? n.toStringAsFixed(1)
+            : n.toStringAsFixed(2);
+    return '$sign$s${units[i]}';
+  }
+
+  double _clampDouble(double v, double lo, double hi) =>
+      v < lo ? lo : (v > hi ? hi : v);
 
   // === Upgrades (science/atom theme) ===
   final List<Map<String, dynamic>> _upgrades = [
@@ -299,10 +319,9 @@ class _MyHomePageState extends State<MyHomePage>
       _totalCurrencyEarned += gained;
     });
 
-    // Optional: brief notice of idle rewards (shown as whole number)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Idle rewards: +${_fmtInt(gained)}'),
+        content: Text('Idle rewards: +${_fmtCompact(gained)}'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -320,7 +339,6 @@ class _MyHomePageState extends State<MyHomePage>
     for (int i = 0; i < _upgrades.length; i++) {
       prefs.setInt('upgrade_count_$i', _upgrades[i]['count']);
     }
-    // Save last saved timestamp for idle rewards
     final nowMillis = DateTime.now().millisecondsSinceEpoch;
     prefs.setInt('lastSavedMillis', nowMillis);
     _lastSavedMillis = nowMillis;
@@ -359,7 +377,7 @@ class _MyHomePageState extends State<MyHomePage>
         end: localPos + const Offset(0, -90),
         t0: now,
         duration: 1.0,
-        text: '+${_fmtInt(_tapValue)}',
+        text: '+${_fmtCompact(_tapValue)}',
       ),
     );
   }
@@ -420,33 +438,15 @@ class _MyHomePageState extends State<MyHomePage>
               ),
             ),
           ),
+
+          // ====== Top mini panel (Rate + Tap) ======
           Positioned(
-            top: 16,
-            left: 16,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: const Color.fromRGBO(255, 255, 255, 0.1),
-                    border: Border.all(color: Colors.white24),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Currency shown as whole number
-                      Text('💰 Currency: ${_fmtInt(_counter)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
-                      // Keep rate 1 decimal for clarity
-                      Text('⏱ Rate: ${_passiveRate.toStringAsFixed(1)}/sec', style: const TextStyle(fontSize: 22, color: Colors.white)),
-                      // Tap value shown as whole number
-                      Text('👆 Tap: ${_fmtInt(_tapValue)}', style: const TextStyle(fontSize: 22, color: Colors.white)),
-                    ],
-                  ),
-                ),
-              ),
+            top: 12,
+            left: 12,
+            right: 12,
+            child: _TopMiniPanel(
+              rate: '${_fmtCompact(_passiveRate)}/s',
+              tap: _fmtCompact(_tapValue),
             ),
           ),
 
@@ -496,7 +496,7 @@ class _MyHomePageState extends State<MyHomePage>
             );
           }),
 
-          // Floating +X text (whole number)
+          // Floating +X text (compact)
           ..._floatTexts.map((ft) {
             final t = ((_fxTime - ft.t0) / ft.duration).clamp(0.0, 1.0);
             final pos = Offset(
@@ -516,7 +516,7 @@ class _MyHomePageState extends State<MyHomePage>
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       shadows: [
                         Shadow(blurRadius: 6, color: Colors.black, offset: Offset(0, 1)),
                       ],
@@ -526,6 +526,28 @@ class _MyHomePageState extends State<MyHomePage>
               ),
             );
           }),
+
+          // ====== Bottom spectrometer (Currency only) ======
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final base = min(c.maxWidth, c.maxHeight) * (2 / 3) * 1.08;
+                final w = _clampDouble(base, 260, 520);
+                final h = _clampDouble(base * 0.12, 64, 86);
+                return Align(
+                  alignment: const Alignment(0, 0.55),
+                  child: SpectrometerStrip(
+                    width: w,
+                    height: h,
+                    currency: _fmtCompact(_counter),
+                    // leave these empty to center the currency only
+                    ratePerSec: '',
+                    tapValue: '',
+                  ),
+                );
+              },
+            ),
+          ),
 
           // ====== Upgrades panel toggle ======
           Positioned(
@@ -631,6 +653,256 @@ class _MyHomePageState extends State<MyHomePage>
       _saveData();
     }
   }
+}
+
+// ===================== Top Mini Panel (Rate + Tap) =====================
+class _TopMiniPanel extends StatelessWidget {
+  final String rate;
+  final String tap;
+  const _TopMiniPanel({required this.rate, required this.tap});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color.fromRGBO(255, 255, 255, 0.08),
+            border: Border.all(color: Colors.white24),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.speed, size: 18, color: Colors.white70),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Rate: $rate',
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(Icons.touch_app, size: 18, color: Colors.white70),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Tap: $tap',
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===================== Spectrometer Strip =====================
+class SpectrometerStrip extends StatelessWidget {
+  final double width;
+  final double height;
+  final String currency;
+  final String ratePerSec;
+  final String tapValue;
+
+  const SpectrometerStrip({
+    super.key,
+    required this.width,
+    required this.height,
+    required this.currency,
+    required this.ratePerSec,
+    required this.tapValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final onlyCurrency = ratePerSec.isEmpty && tapValue.isEmpty;
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        children: [
+          CustomPaint(
+            size: Size(width, height),
+            painter: _SpectrometerStrokePainter(),
+          ),
+          ClipPath(
+            clipper: _SpectrometerClipper(),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color.fromRGBO(255, 255, 255, 0.08),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: onlyCurrency ? MainAxisAlignment.center : MainAxisAlignment.start,
+                  children: onlyCurrency
+                      ? [
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                currency,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ]
+                      : [
+                          _StatCell(icon: Icons.account_balance_wallet, label: 'Currency', value: currency),
+                          const _DividerDot(),
+                          _StatCell(icon: Icons.speed, label: 'Rate', value: ratePerSec),
+                          const _DividerDot(),
+                          _StatCell(icon: Icons.touch_app, label: 'Tap', value: tapValue),
+                        ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _StatCell({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: Colors.white70),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+              softWrap: false,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+              softWrap: false,
+              style: const TextStyle(
+                color: Colors.white60,
+                fontSize: 10,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DividerDot extends StatelessWidget {
+  const _DividerDot();
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 18,
+      child: Center(
+        child: Container(
+          width: 5,
+          height: 5,
+          decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+        ),
+      ),
+    );
+  }
+}
+
+class _SpectrometerClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) => _spectrometerPath(size);
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+
+  Path _spectrometerPath(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final arc = h * 0.9;
+
+    final path = Path();
+    path.moveTo(0, arc);
+    path.quadraticBezierTo(w / 2, -arc * 0.7, w, arc);
+    path.lineTo(w, h - 2);
+    path.quadraticBezierTo(w / 2, h + arc * 0.6, 0, h - 2);
+    path.close();
+    return path;
+  }
+}
+
+class _SpectrometerStrokePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = _SpectrometerClipper()._spectrometerPath(size);
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final shader = const LinearGradient(
+      colors: [Color(0x55B388FF), Color(0x5596E6F6), Color(0x557C4DFF)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ).createShader(rect);
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..shader = shader
+      ..strokeWidth = 2.2
+      ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ===================== Floating FX model types =====================
