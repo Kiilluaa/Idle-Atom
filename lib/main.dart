@@ -22,7 +22,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.deepPurple,
-        snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+        snackBarTheme:
+            const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       ),
       home: const MyHomePage(),
     );
@@ -75,17 +76,67 @@ class _MyHomePageState extends State<MyHomePage>
 
   // ======== Upgrades (science/atom theme) ========
   final List<Map<String, dynamic>> _upgrades = [
-    {'label': 'Ion Trap',        'color': Colors.teal,   'baseCost': 50,    'value': 0.1, 'count': 0, 'type': 'rate'},
-    {'label': 'Fusion Chamber',  'color': Colors.orange, 'baseCost': 225,   'value': 0.2, 'count': 0, 'type': 'rate'},
-    {'label': 'Quantum Tuner',   'color': Colors.green,  'baseCost': 950,   'value': 1.0, 'count': 0, 'type': 'tap'},
-    {'label': 'Muon Gauntlet',   'color': Colors.red,    'baseCost': 4000,  'value': 2.0, 'count': 0, 'type': 'tap'},
-    {'label': 'Research Grant',  'color': Colors.blue,   'baseCost': 17000, 'value': 1.0, 'count': 0, 'type': 'rate'},
-    {'label': 'Nanobot Swarm',   'color': Colors.pink,   'baseCost': 70000, 'value': 3.0, 'count': 0, 'type': 'tap'},
-    {'label': 'Dyson Swarm',     'color': Colors.cyan,   'baseCost': 300000,'value': 5.0, 'count': 0, 'type': 'rate'},
+    {
+      'label': 'Ion Trap',
+      'color': Colors.teal,
+      'baseCost': 50,
+      'value': 0.1,
+      'count': 0,
+      'type': 'rate'
+    },
+    {
+      'label': 'Fusion Chamber',
+      'color': Colors.orange,
+      'baseCost': 225,
+      'value': 0.2,
+      'count': 0,
+      'type': 'rate'
+    },
+    {
+      'label': 'Quantum Tuner',
+      'color': Colors.green,
+      'baseCost': 950,
+      'value': 1.0,
+      'count': 0,
+      'type': 'tap'
+    },
+    {
+      'label': 'Muon Gauntlet',
+      'color': Colors.red,
+      'baseCost': 4000,
+      'value': 2.0,
+      'count': 0,
+      'type': 'tap'
+    },
+    {
+      'label': 'Research Grant',
+      'color': Colors.blue,
+      'baseCost': 17000,
+      'value': 1.0,
+      'count': 0,
+      'type': 'rate'
+    },
+    {
+      'label': 'Nanobot Swarm',
+      'color': Colors.pink,
+      'baseCost': 70000,
+      'value': 3.0,
+      'count': 0,
+      'type': 'tap'
+    },
+    {
+      'label': 'Dyson Swarm',
+      'color': Colors.cyan,
+      'baseCost': 300000,
+      'value': 5.0,
+      'count': 0,
+      'type': 'rate'
+    },
   ];
 
   // ======== FX layer control ========
-  final GlobalKey<FloatingFxLayerState> _fxKey = GlobalKey<FloatingFxLayerState>();
+  final GlobalKey<FloatingFxLayerState> _fxKey =
+      GlobalKey<FloatingFxLayerState>();
   final GlobalKey _stackKey = GlobalKey();
 
   // === Helpers ===
@@ -118,8 +169,8 @@ class _MyHomePageState extends State<MyHomePage>
       _applyIdleRewardsIfAny(); // grant offline earnings on startup (capped)
       _saveData(silent: true);
       _startTimer();
-      _autoSaveTimer =
-          Timer.periodic(const Duration(minutes: 2), (_) => _saveData(silent: true));
+      _autoSaveTimer = Timer.periodic(
+          const Duration(minutes: 2), (_) => _saveData(silent: true));
       _checkAchievements();
     });
   }
@@ -128,43 +179,201 @@ class _MyHomePageState extends State<MyHomePage>
     // Add targets for progress bars (Currency / Taps / Upgrades)
     final List<Map<String, dynamic>> all = [
       // Currency
-      {'id': 'cur_100',   'title': 'Hundredaire',   'desc': 'Earn 100 currency',     'category': 'Currency', 'target': 100,      'metric': 'currency'},
-      {'id': 'cur_1k',    'title': 'Thousandaire',  'desc': 'Earn 1,000 currency',   'category': 'Currency', 'target': 1000,     'metric': 'currency'},
-      {'id': 'cur_10k',   'title': 'Big Spender',   'desc': 'Earn 10,000 currency',  'category': 'Currency', 'target': 10000,    'metric': 'currency'},
-      {'id': 'cur_100k',  'title': 'Wealthy',       'desc': 'Earn 100K currency',    'category': 'Currency', 'target': 100000,   'metric': 'currency'},
-      {'id': 'cur_1mil',  'title': 'Millionaire',   'desc': 'Earn 1M currency',      'category': 'Currency', 'target': 1000000,  'metric': 'currency'},
-      {'id': 'cur_10mil', 'title': 'Tycoon',        'desc': 'Earn 10M currency',     'category': 'Currency', 'target': 10000000, 'metric': 'currency'},
+      {
+        'id': 'cur_100',
+        'title': 'Hundredaire',
+        'desc': 'Earn 100 currency',
+        'category': 'Currency',
+        'target': 100,
+        'metric': 'currency'
+      },
+      {
+        'id': 'cur_1k',
+        'title': 'Thousandaire',
+        'desc': 'Earn 1,000 currency',
+        'category': 'Currency',
+        'target': 1000,
+        'metric': 'currency'
+      },
+      {
+        'id': 'cur_10k',
+        'title': 'Big Spender',
+        'desc': 'Earn 10,000 currency',
+        'category': 'Currency',
+        'target': 10000,
+        'metric': 'currency'
+      },
+      {
+        'id': 'cur_100k',
+        'title': 'Wealthy',
+        'desc': 'Earn 100K currency',
+        'category': 'Currency',
+        'target': 100000,
+        'metric': 'currency'
+      },
+      {
+        'id': 'cur_1mil',
+        'title': 'Millionaire',
+        'desc': 'Earn 1M currency',
+        'category': 'Currency',
+        'target': 1000000,
+        'metric': 'currency'
+      },
+      {
+        'id': 'cur_10mil',
+        'title': 'Tycoon',
+        'desc': 'Earn 10M currency',
+        'category': 'Currency',
+        'target': 10000000,
+        'metric': 'currency'
+      },
 
       // Taps
-      {'id': 'tap_10',    'title': 'Click Novice',      'desc': 'Tap 10 times',        'category': 'Taps', 'target': 10,      'metric': 'taps'},
-      {'id': 'tap_100',   'title': 'Click Apprentice',  'desc': 'Tap 100 times',       'category': 'Taps', 'target': 100,     'metric': 'taps'},
-      {'id': 'tap_1k',    'title': 'Clicker Pro',       'desc': 'Tap 1,000 times',     'category': 'Taps', 'target': 1000,    'metric': 'taps'},
-      {'id': 'tap_10k',   'title': 'Click Legend',      'desc': 'Tap 10,000 times',    'category': 'Taps', 'target': 10000,   'metric': 'taps'},
-      {'id': 'tap_100k',  'title': 'Tap Machine',       'desc': 'Tap 100,000 times',   'category': 'Taps', 'target': 100000,  'metric': 'taps'},
-      {'id': 'tap_1mil',  'title': 'Tap God',           'desc': 'Tap 1 million times', 'category': 'Taps', 'target': 1000000, 'metric': 'taps'},
+      {
+        'id': 'tap_10',
+        'title': 'Click Novice',
+        'desc': 'Tap 10 times',
+        'category': 'Taps',
+        'target': 10,
+        'metric': 'taps'
+      },
+      {
+        'id': 'tap_100',
+        'title': 'Click Apprentice',
+        'desc': 'Tap 100 times',
+        'category': 'Taps',
+        'target': 100,
+        'metric': 'taps'
+      },
+      {
+        'id': 'tap_1k',
+        'title': 'Clicker Pro',
+        'desc': 'Tap 1,000 times',
+        'category': 'Taps',
+        'target': 1000,
+        'metric': 'taps'
+      },
+      {
+        'id': 'tap_10k',
+        'title': 'Click Legend',
+        'desc': 'Tap 10,000 times',
+        'category': 'Taps',
+        'target': 10000,
+        'metric': 'taps'
+      },
+      {
+        'id': 'tap_100k',
+        'title': 'Tap Machine',
+        'desc': 'Tap 100,000 times',
+        'category': 'Taps',
+        'target': 100000,
+        'metric': 'taps'
+      },
+      {
+        'id': 'tap_1mil',
+        'title': 'Tap God',
+        'desc': 'Tap 1 million times',
+        'category': 'Taps',
+        'target': 1000000,
+        'metric': 'taps'
+      },
 
       // Upgrades
-      {'id': 'up_1',   'title': 'Investor',      'desc': 'Buy 1 upgrade',    'category': 'Upgrades', 'target': 1,   'metric': 'upgrades'},
-      {'id': 'up_10',  'title': 'Manager',       'desc': 'Buy 10 upgrades',   'category': 'Upgrades', 'target': 10,  'metric': 'upgrades'},
-      {'id': 'up_25',  'title': 'Director',      'desc': 'Buy 25 upgrades',   'category': 'Upgrades', 'target': 25,  'metric': 'upgrades'},
-      {'id': 'up_50',  'title': 'Executive',     'desc': 'Buy 50 upgrades',   'category': 'Upgrades', 'target': 50,  'metric': 'upgrades'},
-      {'id': 'up_100', 'title': 'Magnate',       'desc': 'Buy 100 upgrades',  'category': 'Upgrades', 'target': 100, 'metric': 'upgrades'},
-      {'id': 'up_250', 'title': 'Conglomerate',  'desc': 'Buy 250 upgrades',  'category': 'Upgrades', 'target': 250, 'metric': 'upgrades'},
+      {
+        'id': 'up_1',
+        'title': 'Investor',
+        'desc': 'Buy 1 upgrade',
+        'category': 'Upgrades',
+        'target': 1,
+        'metric': 'upgrades'
+      },
+      {
+        'id': 'up_10',
+        'title': 'Manager',
+        'desc': 'Buy 10 upgrades',
+        'category': 'Upgrades',
+        'target': 10,
+        'metric': 'upgrades'
+      },
+      {
+        'id': 'up_25',
+        'title': 'Director',
+        'desc': 'Buy 25 upgrades',
+        'category': 'Upgrades',
+        'target': 25,
+        'metric': 'upgrades'
+      },
+      {
+        'id': 'up_50',
+        'title': 'Executive',
+        'desc': 'Buy 50 upgrades',
+        'category': 'Upgrades',
+        'target': 50,
+        'metric': 'upgrades'
+      },
+      {
+        'id': 'up_100',
+        'title': 'Magnate',
+        'desc': 'Buy 100 upgrades',
+        'category': 'Upgrades',
+        'target': 100,
+        'metric': 'upgrades'
+      },
+      {
+        'id': 'up_250',
+        'title': 'Conglomerate',
+        'desc': 'Buy 250 upgrades',
+        'category': 'Upgrades',
+        'target': 250,
+        'metric': 'upgrades'
+      },
 
       // Combo (no progress bar)
-      {'id': 'combo_1', 'title': 'Getting Started',  'desc': 'Tap 10 & Buy 1',                       'category': 'Combo'},
-      {'id': 'combo_2', 'title': 'Small Business',   'desc': 'Tap 100 & 1K Currency',                'category': 'Combo'},
-      {'id': 'combo_3', 'title': 'Growing Fast',     'desc': 'Tap 1K & 10 Upgrades',                 'category': 'Combo'},
-      {'id': 'combo_4', 'title': 'Mid Tier Mogul',   'desc': '5K Taps & 100K Currency',              'category': 'Combo'},
-      {'id': 'combo_5', 'title': 'Corporate Climber','desc': '50 Upgrades & 1M Currency',            'category': 'Combo'},
-      {'id': 'combo_6', 'title': 'Capitalist Elite', 'desc': '100K Taps, 100 Upgrades, 10M Currency','category': 'Combo'},
+      {
+        'id': 'combo_1',
+        'title': 'Getting Started',
+        'desc': 'Tap 10 & Buy 1',
+        'category': 'Combo'
+      },
+      {
+        'id': 'combo_2',
+        'title': 'Small Business',
+        'desc': 'Tap 100 & 1K Currency',
+        'category': 'Combo'
+      },
+      {
+        'id': 'combo_3',
+        'title': 'Growing Fast',
+        'desc': 'Tap 1K & 10 Upgrades',
+        'category': 'Combo'
+      },
+      {
+        'id': 'combo_4',
+        'title': 'Mid Tier Mogul',
+        'desc': '5K Taps & 100K Currency',
+        'category': 'Combo'
+      },
+      {
+        'id': 'combo_5',
+        'title': 'Corporate Climber',
+        'desc': '50 Upgrades & 1M Currency',
+        'category': 'Combo'
+      },
+      {
+        'id': 'combo_6',
+        'title': 'Capitalist Elite',
+        'desc': '100K Taps, 100 Upgrades, 10M Currency',
+        'category': 'Combo'
+      },
     ];
 
     _achievements.addAll(all);
     for (var ach in all) {
       _grouped[ach['category']]!.add(ach);
     }
-    final maxLength = _grouped.values.map((list) => list.length).reduce((a, b) => a > b ? a : b);
+    final maxLength = _grouped.values
+        .map((list) => list.length)
+        .reduce((a, b) => a > b ? a : b);
     for (var cat in _grouped.keys) {
       while (_grouped[cat]!.length < maxLength) {
         _grouped[cat]!.add({'placeholder': true});
@@ -189,17 +398,25 @@ class _MyHomePageState extends State<MyHomePage>
       } else if ((ach['category'] == 'Combo')) {
         switch (id) {
           case 'combo_1':
-            ok = _totalTaps >= 10 && _totalUpgrades >= 1; break;
+            ok = _totalTaps >= 10 && _totalUpgrades >= 1;
+            break;
           case 'combo_2':
-            ok = _totalTaps >= 100 && _totalCurrencyEarned >= 1000; break;
+            ok = _totalTaps >= 100 && _totalCurrencyEarned >= 1000;
+            break;
           case 'combo_3':
-            ok = _totalTaps >= 1000 && _totalUpgrades >= 10; break;
+            ok = _totalTaps >= 1000 && _totalUpgrades >= 10;
+            break;
           case 'combo_4':
-            ok = _totalTaps >= 5000 && _totalCurrencyEarned >= 100000; break;
+            ok = _totalTaps >= 5000 && _totalCurrencyEarned >= 100000;
+            break;
           case 'combo_5':
-            ok = _totalUpgrades >= 50 && _totalCurrencyEarned >= 1000000; break;
+            ok = _totalUpgrades >= 50 && _totalCurrencyEarned >= 1000000;
+            break;
           case 'combo_6':
-            ok = _totalTaps >= 100000 && _totalUpgrades >= 100 && _totalCurrencyEarned >= 10000000; break;
+            ok = _totalTaps >= 100000 &&
+                _totalUpgrades >= 100 &&
+                _totalCurrencyEarned >= 10000000;
+            break;
         }
       }
 
@@ -223,7 +440,8 @@ class _MyHomePageState extends State<MyHomePage>
     final categories = _grouped.keys.toList();
     final maxRows = _grouped[categories[0]]!.length;
 
-    ValueNotifier<int> filter = ValueNotifier<int>(0); // 0=All,1=Locked,2=Unlocked
+    ValueNotifier<int> filter =
+        ValueNotifier<int>(0); // 0=All,1=Locked,2=Unlocked
 
     double progressFor(Map<String, dynamic> ach) {
       final metric = ach['metric'];
@@ -254,11 +472,20 @@ class _MyHomePageState extends State<MyHomePage>
               builder: (_, f, __) => Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ChoiceChip(label: const Text('All'), selected: f == 0, onSelected: (_) => filter.value = 0),
+                  ChoiceChip(
+                      label: const Text('All'),
+                      selected: f == 0,
+                      onSelected: (_) => filter.value = 0),
                   const SizedBox(width: 8),
-                  ChoiceChip(label: const Text('Locked'), selected: f == 1, onSelected: (_) => filter.value = 1),
+                  ChoiceChip(
+                      label: const Text('Locked'),
+                      selected: f == 1,
+                      onSelected: (_) => filter.value = 1),
                   const SizedBox(width: 8),
-                  ChoiceChip(label: const Text('Unlocked'), selected: f == 2, onSelected: (_) => filter.value = 2),
+                  ChoiceChip(
+                      label: const Text('Unlocked'),
+                      selected: f == 2,
+                      onSelected: (_) => filter.value = 2),
                 ],
               ),
             ),
@@ -267,7 +494,10 @@ class _MyHomePageState extends State<MyHomePage>
               children: categories
                   .map((c) => Expanded(
                         child: Center(
-                          child: Text(c, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: Text(c,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ))
                   .toList(),
@@ -288,8 +518,12 @@ class _MyHomePageState extends State<MyHomePage>
                               return const Expanded(child: SizedBox(height: 110));
                             }
                             final unlocked = isUnlocked(ach);
-                            if (f == 1 && unlocked) return const Expanded(child: SizedBox(height: 110));
-                            if (f == 2 && !unlocked) return const Expanded(child: SizedBox(height: 110));
+                            if (f == 1 && unlocked) {
+                              return const Expanded(child: SizedBox(height: 110));
+                            }
+                            if (f == 2 && !unlocked) {
+                              return const Expanded(child: SizedBox(height: 110));
+                            }
 
                             return Expanded(
                               child: Container(
@@ -297,35 +531,57 @@ class _MyHomePageState extends State<MyHomePage>
                                 padding: const EdgeInsets.all(8),
                                 height: 110,
                                 decoration: BoxDecoration(
-                                  color: unlocked ? Colors.green[700] : Colors.grey[850],
+                                  color: unlocked
+                                      ? Colors.green[700]
+                                      : Colors.grey[850],
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: unlocked ? Colors.greenAccent : Colors.white10),
+                                  border: Border.all(
+                                      color: unlocked
+                                          ? Colors.greenAccent
+                                          : Colors.white10),
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(unlocked ? Icons.check_circle : Icons.lock, color: Colors.white),
+                                    Icon(
+                                        unlocked
+                                            ? Icons.check_circle
+                                            : Icons.lock,
+                                        color: Colors.white),
                                     const SizedBox(height: 6),
                                     FittedBox(
                                       fit: BoxFit.scaleDown,
                                       child: Text(
-                                        unlocked ? ach['title'] : (ach['title'] ?? '????'),
-                                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                                        unlocked
+                                            ? ach['title']
+                                            : (ach['title'] ?? '????'),
+                                        style: const TextStyle(
+                                            color: Colors.white, fontSize: 14),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
-                                    if (!unlocked && (ach['metric'] == 'currency' || ach['metric'] == 'taps' || ach['metric'] == 'upgrades')) ...[
+                                    if (!unlocked &&
+                                        (ach['metric'] == 'currency' ||
+                                            ach['metric'] == 'taps' ||
+                                            ach['metric'] == 'upgrades')) ...[
                                       const SizedBox(height: 6),
-                                      LinearProgressIndicator(value: progressFor(ach), minHeight: 6),
+                                      LinearProgressIndicator(
+                                          value: progressFor(ach),
+                                          minHeight: 6),
                                       const SizedBox(height: 4),
                                       Text(_lockedProgressText(ach),
-                                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                          style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 11),
                                           textAlign: TextAlign.center),
-                                    ] else if (unlocked && ach.containsKey('desc')) ...[
+                                    ] else if (unlocked &&
+                                        ach.containsKey('desc')) ...[
                                       const SizedBox(height: 4),
                                       Text(
                                         ach['desc'],
-                                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                        style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11),
                                         textAlign: TextAlign.center,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
@@ -419,7 +675,8 @@ class _MyHomePageState extends State<MyHomePage>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Idle rewards: +${_fmtCompact(gained)}${elapsedSec > cappedSec ? ' (capped to ${capHours}h)' : ''}'),
+        content: Text(
+            'Idle rewards: +${_fmtCompact(gained)}${elapsedSec > cappedSec ? ' (capped to ${capHours}h)' : ''}'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -455,7 +712,9 @@ class _MyHomePageState extends State<MyHomePage>
     _lastSaveToastAt = now;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Game saved"), duration: Duration(milliseconds: 300)),
+      const SnackBar(
+          content: Text("Game saved"),
+          duration: Duration(milliseconds: 300)),
     );
   }
 
@@ -483,7 +742,9 @@ class _MyHomePageState extends State<MyHomePage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Settings',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 SwitchListTile(
                   title: const Text('Haptics'),
@@ -492,7 +753,8 @@ class _MyHomePageState extends State<MyHomePage>
                 ),
                 SwitchListTile(
                   title: const Text('Reduce animations'),
-                  subtitle: const Text('Disables floating FX and simplifies visuals'),
+                  subtitle: const Text(
+                      'Disables floating FX and simplifies visuals'),
                   value: tmpReduce,
                   onChanged: (v) => setModal(() => tmpReduce = v),
                 ),
@@ -517,10 +779,17 @@ class _MyHomePageState extends State<MyHomePage>
                           context: context,
                           builder: (_) => AlertDialog(
                             title: const Text('Reset progress?'),
-                            content: const Text('This will clear all saved data. This action cannot be undone.'),
+                            content: const Text(
+                                'This will clear all saved data. This action cannot be undone.'),
                             actions: [
-                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                              FilledButton.tonal(onPressed: () => Navigator.pop(context, true), child: const Text('Reset')),
+                              TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text('Cancel')),
+                              FilledButton.tonal(
+                                  onPressed: () =>
+                                      Navigator.pop(context, true),
+                                  child: const Text('Reset')),
                             ],
                           ),
                         );
@@ -592,11 +861,15 @@ class _MyHomePageState extends State<MyHomePage>
       appBar: AppBar(
         title: const Text('Clicker'),
         actions: [
-          IconButton(icon: const Icon(Icons.settings), tooltip: 'Settings', onPressed: _openSettings),
+          IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Settings',
+              onPressed: _openSettings),
           IconButton(
             icon: const Icon(Icons.emoji_events),
             onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => _buildAchievementPage()));
+              Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => _buildAchievementPage()));
             },
           ),
           IconButton(icon: const Icon(Icons.save), onPressed: _saveData),
@@ -626,7 +899,8 @@ class _MyHomePageState extends State<MyHomePage>
                 if (_reduceAnimations) return;
                 final local = _globalToStackLocal(details.globalPosition);
                 if (local != null) {
-                  _fxKey.currentState?.spawnTapFx(local, '+${_fmtCompact(_tapValue)}');
+                  _fxKey.currentState
+                      ?.spawnTapFx(local, '+${_fmtCompact(_tapValue)}');
                 }
               },
               onTapUp: (_) {
@@ -639,14 +913,15 @@ class _MyHomePageState extends State<MyHomePage>
                 scale: _tapScale,
                 duration: _tapAnimDuration,
                 child: RepaintBoundary(
-                  child: AtomGraphic(size: tapDiameter, reduceAnimations: _reduceAnimations),
+                  child: AtomGraphic(
+                      size: tapDiameter, reduceAnimations: _reduceAnimations),
                 ),
               ),
             ),
           ),
 
           // ====== Floating FX layer (isolated repaint) ======
-          if (!_reduceAnimations) FloatingFxLayer(key: _fxKey),
+          if (!_reduceAnimations) const FloatingFxLayer(),
 
           // ====== Bottom spectrometer (Currency only) ======
           Positioned.fill(
@@ -669,19 +944,6 @@ class _MyHomePageState extends State<MyHomePage>
             ),
           ),
 
-          // ====== Upgrades panel toggle ======
-          Positioned(
-            bottom: 20,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ElevatedButton(
-                onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                child: Text(_isExpanded ? 'Close Upgrades' : 'Upgrades'),
-              ),
-            ),
-          ),
-
           // ====== Upgrades sheet ======
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
@@ -695,21 +957,18 @@ class _MyHomePageState extends State<MyHomePage>
               elevation: 10,
               child: Column(
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => setState(() => _isExpanded = false),
-                    ),
-                  ),
                   Expanded(
                     child: ListView.builder(
                       itemCount: _upgrades.length,
                       itemBuilder: (context, index) {
                         final upgrade = _upgrades[index];
-                        final int cost = getCurrentCost(upgrade['baseCost'], upgrade['count'], _costMultiplier);
+                        final int cost = getCurrentCost(
+                            upgrade['baseCost'],
+                            upgrade['count'],
+                            _costMultiplier);
 
-                        final prevCount = index == 0 ? 8 : _upgrades[index - 1]['count'] as int;
+                        final prevCount =
+                            index == 0 ? 8 : _upgrades[index - 1]['count'] as int;
                         final isVisible = index == 0 || prevCount >= 1;
                         final isUnlocked = index == 0 || prevCount >= 8;
 
@@ -734,20 +993,30 @@ class _MyHomePageState extends State<MyHomePage>
                                 }
                               : null,
                           child: Container(
-                            color: isUnlocked ? (canBuy ? upgrade['color'] : Colors.blueGrey[700]) : Colors.grey[850],
+                            color: isUnlocked
+                                ? (canBuy
+                                    ? upgrade['color']
+                                    : Colors.blueGrey[700])
+                                : Colors.grey[850],
                             height: 100,
                             alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 20),
                             child: Row(
                               children: [
-                                Icon(isUnlocked ? Icons.science : Icons.lock, color: Colors.white),
+                                Icon(
+                                    isUnlocked
+                                        ? Icons.science
+                                        : Icons.lock,
+                                    color: Colors.white),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     isUnlocked
                                         ? '${upgrade['label']} (+${upgrade['value']}/${upgrade['type']}) - Cost: $cost - Owned: ${upgrade['count']}'
                                         : 'Locked – buy ${index == 0 ? '' : _upgrades[index - 1]['label']} ×8',
-                                    style: const TextStyle(fontSize: 18, color: Colors.white),
+                                    style: const TextStyle(
+                                        fontSize: 18, color: Colors.white),
                                   ),
                                 ),
                               ],
@@ -758,6 +1027,47 @@ class _MyHomePageState extends State<MyHomePage>
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          // ====== Single Upgrades Button (slides with the sheet) ======
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            left: 0,
+            right: 0,
+            bottom: _isExpanded ? (screenHeight * 0.6) + 16 : 20,
+            child: Center(
+              child: ElevatedButton(
+                onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      Colors.deepPurple.shade400.withValues(alpha: 0.85),
+                  foregroundColor: Colors.white,
+                  elevation: 6,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: Colors.white24),
+                  ),
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, anim) =>
+                      FadeTransition(opacity: anim, child: child),
+                  child: Text(
+                    _isExpanded ? 'Close Upgrades' : 'Upgrades',
+                    key: ValueKey<bool>(_isExpanded),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -924,10 +1234,13 @@ class SpectrometerStrip extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
-                decoration: const BoxDecoration(color: Color.fromRGBO(255, 255, 255, 0.08)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration:
+                    const BoxDecoration(color: Color.fromRGBO(255, 255, 255, 0.08)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
-                  mainAxisAlignment: onlyCurrency ? MainAxisAlignment.center : MainAxisAlignment.start,
+                  mainAxisAlignment:
+                      onlyCurrency ? MainAxisAlignment.center : MainAxisAlignment.start,
                   children: onlyCurrency
                       ? [
                           Flexible(
@@ -946,11 +1259,18 @@ class SpectrometerStrip extends StatelessWidget {
                           ),
                         ]
                       : [
-                          _StatCell(icon: Icons.account_balance_wallet, label: 'Currency', value: currency),
+                          _StatCell(
+                              icon: Icons.account_balance_wallet,
+                              label: 'Currency',
+                              value: currency),
                           const _DividerDot(),
-                          _StatCell(icon: Icons.speed, label: 'Rate', value: ratePerSec),
+                          _StatCell(
+                              icon: Icons.speed,
+                              label: 'Rate',
+                              value: ratePerSec),
                           const _DividerDot(),
-                          _StatCell(icon: Icons.touch_app, label: 'Tap', value: tapValue),
+                          _StatCell(
+                              icon: Icons.touch_app, label: 'Tap', value: tapValue),
                         ],
                 ),
               ),
@@ -966,7 +1286,8 @@ class _StatCell extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _StatCell({required this.icon, required this.label, required this.value});
+  const _StatCell(
+      {required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -983,7 +1304,8 @@ class _StatCell extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.fade,
               softWrap: false,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 2),
@@ -994,7 +1316,8 @@ class _StatCell extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.fade,
               softWrap: false,
-              style: const TextStyle(color: Colors.white60, fontSize: 10, letterSpacing: 1.2),
+              style: const TextStyle(
+                  color: Colors.white60, fontSize: 10, letterSpacing: 1.2),
             ),
           ),
         ],
@@ -1010,7 +1333,11 @@ class _DividerDot extends StatelessWidget {
     return SizedBox(
       width: 18,
       child: Center(
-        child: Container(width: 5, height: 5, decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle)),
+        child: Container(
+            width: 5,
+            height: 5,
+            decoration: const BoxDecoration(
+                color: Colors.white24, shape: BoxShape.circle)),
       ),
     );
   }
@@ -1069,7 +1396,8 @@ class FloatingFxLayer extends StatefulWidget {
   State<FloatingFxLayer> createState() => FloatingFxLayerState();
 }
 
-class FloatingFxLayerState extends State<FloatingFxLayer> with SingleTickerProviderStateMixin {
+class FloatingFxLayerState extends State<FloatingFxLayer>
+    with SingleTickerProviderStateMixin {
   Ticker? _fxTicker;
   double _fxTime = 0.0; // seconds
 
@@ -1087,7 +1415,8 @@ class FloatingFxLayerState extends State<FloatingFxLayer> with SingleTickerProvi
         _arcParticles.removeWhere((p) => _fxTime - p.t0 >= p.duration);
         _floatTexts.removeWhere((t) => _fxTime - t.t0 >= t.duration);
       });
-    })..start();
+    })
+      ..start();
   }
 
   @override
@@ -1130,64 +1459,78 @@ class FloatingFxLayerState extends State<FloatingFxLayer> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: Stack(
-        children: [
-          // Mini atoms (arc)
-          ..._arcParticles.map((p) {
-            final t = ((_fxTime - p.t0) / p.duration).clamp(0.0, 1.0);
-            Offset lerpQ(Offset a, Offset b, double t) => Offset(
-                  a.dx + (b.dx - a.dx) * t,
-                  a.dy + (b.dy - a.dy) * t,
-                );
-            final q1 = lerpQ(p.start, p.control, t);
-            final q2 = lerpQ(p.control, p.end, t);
-            final pos = lerpQ(q1, q2, t);
-            final opacity = (1.0 - t);
-            return Positioned(
-              left: pos.dx,
-              top: pos.dy,
-              child: Opacity(
-                opacity: opacity,
-                child: Transform.translate(
-                  offset: const Offset(-10, -10),
-                  child: const MiniAtom(size: 18),
-                ),
+    return PositionedFill(
+      children: [
+        // Mini atoms (arc)
+        ..._arcParticles.map((p) {
+          final t = ((_fxTime - p.t0) / p.duration).clamp(0.0, 1.0);
+          Offset lerpQ(Offset a, Offset b, double t) => Offset(
+                a.dx + (b.dx - a.dx) * t,
+                a.dy + (b.dy - a.dy) * t,
+              );
+          final q1 = lerpQ(p.start, p.control, t);
+          final q2 = lerpQ(p.control, p.end, t);
+          final pos = lerpQ(q1, q2, t);
+          final opacity = (1.0 - t);
+          return Positioned(
+            left: pos.dx,
+            top: pos.dy,
+            child: Opacity(
+              opacity: opacity,
+              child: Transform.translate(
+                offset: const Offset(-10, -10),
+                child: const MiniAtom(size: 18),
               ),
-            );
-          }),
+            ),
+          );
+        }),
 
-          // Floating +X text (compact)
-          ..._floatTexts.map((ft) {
-            final t = ((_fxTime - ft.t0) / ft.duration).clamp(0.0, 1.0);
-            final pos = Offset(
-              lerpDouble(ft.start.dx, ft.end.dx, t)!,
-              lerpDouble(ft.start.dy, ft.end.dy, t)!,
-            );
-            final opacity = (1.0 - t);
-            return Positioned(
-              left: pos.dx,
-              top: pos.dy,
-              child: Opacity(
-                opacity: opacity,
-                child: Transform.translate(
-                  offset: const Offset(-8, -8),
-                  child: Text(
-                    ft.text,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      shadows: [Shadow(blurRadius: 6, color: Colors.black, offset: Offset(0, 1))],
-                    ),
+        // Floating +X text (compact)
+        ..._floatTexts.map((ft) {
+          final t = ((_fxTime - ft.t0) / ft.duration).clamp(0.0, 1.0);
+          final pos = Offset(
+            lerpDouble(ft.start.dx, ft.end.dx, t)!,
+            lerpDouble(ft.start.dy, ft.end.dy, t)!,
+          );
+          final opacity = (1.0 - t);
+          return Positioned(
+            left: pos.dx,
+            top: pos.dy,
+            child: Opacity(
+              opacity: opacity,
+              child: Transform.translate(
+                offset: const Offset(-8, -8),
+                child: Text(
+                  ft.text,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    shadows: [
+                      Shadow(
+                          blurRadius: 6,
+                          color: Colors.black,
+                          offset: Offset(0, 1))
+                    ],
                   ),
                 ),
               ),
-            );
-          }),
-        ],
-      ),
+            ),
+          );
+        }),
+      ],
     );
+  }
+}
+
+// Helper to avoid a verbose Stack+Positioned.fill everywhere
+class PositionedFill extends StatelessWidget {
+  final List<Widget> children;
+  const PositionedFill({super.key, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(child: Stack(children: children));
   }
 }
 
@@ -1196,9 +1539,9 @@ class _ArcParticle {
   final Offset start;
   final Offset control;
   final Offset end;
-  final double t0;       // spawn time in seconds
+  final double t0; // spawn time in seconds
   final double duration; // seconds
-  final double size;     // logical px
+  final double size; // logical px
   _ArcParticle({
     required this.start,
     required this.control,
@@ -1212,7 +1555,7 @@ class _ArcParticle {
 class _FloatText {
   final Offset start;
   final Offset end;
-  final double t0;       // spawn time in seconds
+  final double t0; // spawn time in seconds
   final double duration; // seconds
   final String text;
   _FloatText({
@@ -1234,7 +1577,8 @@ class AtomGraphic extends StatefulWidget {
   State<AtomGraphic> createState() => _AtomGraphicState();
 }
 
-class _AtomGraphicState extends State<AtomGraphic> with SingleTickerProviderStateMixin {
+class _AtomGraphicState extends State<AtomGraphic>
+    with SingleTickerProviderStateMixin {
   Ticker? _ticker;
   double _timeSeconds = 0.0; // continuously increasing time
 
@@ -1247,7 +1591,8 @@ class _AtomGraphicState extends State<AtomGraphic> with SingleTickerProviderStat
         setState(() {
           _timeSeconds = elapsed.inMicroseconds / 1e6;
         });
-      })..start();
+      })
+        ..start();
     }
   }
 
@@ -1259,12 +1604,13 @@ class _AtomGraphicState extends State<AtomGraphic> with SingleTickerProviderStat
         _ticker?.dispose();
         _ticker = null;
       } else {
-        _ticker ??= createTicker((elapsed){
+        _ticker ??= createTicker((elapsed) {
           if (!mounted) return;
           setState(() {
             _timeSeconds = elapsed.inMicroseconds / 1e6;
           });
-        })..start();
+        })
+          ..start();
       }
     }
   }
@@ -1279,9 +1625,10 @@ class _AtomGraphicState extends State<AtomGraphic> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size.square(widget.size),
-      painter: _AtomPainter(timeSeconds: _timeSeconds, reduce: widget.reduceAnimations),
+      painter:
+          _AtomPainter(timeSeconds: _timeSeconds, reduce: widget.reduceAnimations),
     );
-  }
+    }
 }
 
 class _AtomPainter extends CustomPainter {
@@ -1310,7 +1657,8 @@ class _AtomPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 8);
 
     // Base ellipse
-    final orbitRect = Rect.fromCenter(center: center, width: radius * 1.8, height: radius * 1.05);
+    final orbitRect =
+        Rect.fromCenter(center: center, width: radius * 1.8, height: radius * 1.05);
 
     // Draw 3 tilted ellipses
     for (final tiltDeg in [0.0, 60.0, 120.0]) {
@@ -1331,7 +1679,7 @@ class _AtomPainter extends CustomPainter {
     void drawElectron({
       required double angularSpeed, // radians per second
       required double tiltDeg,
-      required double phase,       // radians
+      required double phase, // radians
       double scale = 1.0,
     }) {
       final tilt = tiltDeg * pi / 180;
@@ -1349,9 +1697,9 @@ class _AtomPainter extends CustomPainter {
       canvas.drawCircle(pos, radius * 0.08, electronPaint);
     }
 
-    drawElectron(angularSpeed: 1.8, tiltDeg:   0, phase: 0.0,      scale: 0.98);
-    drawElectron(angularSpeed: 2.3, tiltDeg:  60, phase: pi / 3,   scale: 0.98);
-    drawElectron(angularSpeed: 2.8, tiltDeg: 120, phase: 2 * pi/3, scale: 0.98);
+    drawElectron(angularSpeed: 1.8, tiltDeg: 0, phase: 0.0, scale: 0.98);
+    drawElectron(angularSpeed: 2.3, tiltDeg: 60, phase: pi / 3, scale: 0.98);
+    drawElectron(angularSpeed: 2.8, tiltDeg: 120, phase: 2 * pi / 3, scale: 0.98);
   }
 
   @override
@@ -1392,7 +1740,8 @@ class _MiniAtomPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = r * 0.18
       ..color = const Color(0x66FFFFFF);
-    final rect = Rect.fromCenter(center: center, width: r * 1.6, height: r * 0.9);
+    final rect =
+        Rect.fromCenter(center: center, width: r * 1.6, height: r * 0.9);
     for (final tiltDeg in [0.0, 60.0, 120.0]) {
       final tilt = tiltDeg * pi / 180;
       canvas.save();
