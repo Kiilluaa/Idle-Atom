@@ -145,15 +145,29 @@ class _MyHomePageState extends State<MyHomePage>
     double n = v.abs().toDouble();
     const units = ['', 'K', 'M', 'B', 'T', 'P', 'E'];
     int i = 0;
+
     while (n >= 1000 && i < units.length - 1) {
       n /= 1000;
       i++;
     }
-    final s = (n >= 100)
-        ? n.toStringAsFixed(0)
-        : (n >= 10)
-            ? n.toStringAsFixed(1)
-            : n.toStringAsFixed(2);
+
+    String s;
+    if (i == 0) {
+      // < 1000 → whole number only
+      s = n.toStringAsFixed(0);
+    } else {
+      // with suffix
+      if (n >= 100) {
+        s = n.toStringAsFixed(0);    // e.g., 123M
+      } else if (n >= 10) {
+        s = n.toStringAsFixed(1);    // e.g., 12.3M
+      } else {
+        s = n.toStringAsFixed(2);    // e.g., 1.23M
+      }
+      // remove trailing .0/.00
+      s = s.replaceAll(RegExp(r'\.?0+$'), '');
+    }
+
     return '$sign$s${units[i]}';
   }
 
@@ -725,6 +739,19 @@ class _MyHomePageState extends State<MyHomePage>
     return box.globalToLocal(globalPos);
   }
 
+  // ====== Helpers for next-cost calculations (for x10 preview) ======
+  List<int> nextCosts(int base, int count, double mult, int n) {
+    final costs = <int>[];
+    for (int k = 0; k < n; k++) {
+      costs.add((base * pow(mult, count + k)).floor());
+    }
+    return costs;
+  }
+
+  int sumNextCosts(int base, int count, double mult, int n) {
+    return nextCosts(base, count, mult, n).fold(0, (a, b) => a + b);
+  }
+
   // SETTINGS SHEET
   void _openSettings() async {
     await showModalBottomSheet(
@@ -921,7 +948,11 @@ class _MyHomePageState extends State<MyHomePage>
           ),
 
           // ====== Floating FX layer (isolated repaint) ======
-          if (!_reduceAnimations) const FloatingFxLayer(),
+          if (!_reduceAnimations)
+            IgnorePointer(
+              ignoring: true,
+              child: FloatingFxLayer(key: _fxKey),
+            ),
 
           // ====== Bottom spectrometer (Currency only) ======
           Positioned.fill(
@@ -944,7 +975,7 @@ class _MyHomePageState extends State<MyHomePage>
             ),
           ),
 
-          // ====== Upgrades sheet ======
+          // ====== Upgrades sheet (polished) ======
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -952,82 +983,24 @@ class _MyHomePageState extends State<MyHomePage>
             left: 0,
             right: 0,
             height: screenHeight * 0.6,
-            child: Material(
-              color: Colors.grey[900],
-              elevation: 10,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _upgrades.length,
-                      itemBuilder: (context, index) {
-                        final upgrade = _upgrades[index];
-                        final int cost = getCurrentCost(
-                            upgrade['baseCost'],
-                            upgrade['count'],
-                            _costMultiplier);
-
-                        final prevCount =
-                            index == 0 ? 8 : _upgrades[index - 1]['count'] as int;
-                        final isVisible = index == 0 || prevCount >= 1;
-                        final isUnlocked = index == 0 || prevCount >= 8;
-
-                        if (!isVisible) return const SizedBox.shrink();
-
-                        final bool canBuy = isUnlocked && _counter >= cost;
-
-                        return InkWell(
-                          onTap: canBuy
-                              ? () {
-                                  setState(() {
-                                    _counter -= cost;
-                                    _totalUpgrades++;
-                                    if (upgrade['type'] == 'rate') {
-                                      _passiveRate += upgrade['value'];
-                                    } else {
-                                      _tapValue += upgrade['value'];
-                                    }
-                                    upgrade['count']++;
-                                    _checkAchievements();
-                                  });
-                                }
-                              : null,
-                          child: Container(
-                            color: isUnlocked
-                                ? (canBuy
-                                    ? upgrade['color']
-                                    : Colors.blueGrey[700])
-                                : Colors.grey[850],
-                            height: 100,
-                            alignment: Alignment.centerLeft,
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 20),
-                            child: Row(
-                              children: [
-                                Icon(
-                                    isUnlocked
-                                        ? Icons.science
-                                        : Icons.lock,
-                                    color: Colors.white),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    isUnlocked
-                                        ? '${upgrade['label']} (+${upgrade['value']}/${upgrade['type']}) - Cost: $cost - Owned: ${upgrade['count']}'
-                                        : 'Locked – buy ${index == 0 ? '' : _upgrades[index - 1]['label']} ×8',
-                                    style: const TextStyle(
-                                        fontSize: 18, color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
+            child: UpgradeBottomSheet(
+              upgrades: _upgrades,
+              counter: _counter,
+              costMultiplier: _costMultiplier,
+              onBuy: (index, qty, totalCost) {
+                setState(() {
+                  _counter -= totalCost;
+                  _totalUpgrades += qty;
+                  if (_upgrades[index]['type'] == 'rate') {
+                    _passiveRate += (_upgrades[index]['value'] as double) * qty;
+                  } else {
+                    _tapValue += (_upgrades[index]['value'] as double) * qty;
+                  }
+                  _upgrades[index]['count'] =
+                      (_upgrades[index]['count'] as int) + qty;
+                  _checkAchievements();
+                });
+              },
             ),
           ),
 
@@ -1390,7 +1363,8 @@ class _SpectrometerStrokePainter extends CustomPainter {
 
 // ===================== Floating FX layer (isolated) =====================
 class FloatingFxLayer extends StatefulWidget {
-  const FloatingFxLayer({super.key});
+  const FloatingFxLayer({super.key, this.keyOverride});
+  final Key? keyOverride;
 
   @override
   State<FloatingFxLayer> createState() => FloatingFxLayerState();
@@ -1459,7 +1433,7 @@ class FloatingFxLayerState extends State<FloatingFxLayer>
 
   @override
   Widget build(BuildContext context) {
-    return PositionedFill(
+    return Stack(
       children: [
         // Mini atoms (arc)
         ..._arcParticles.map((p) {
@@ -1520,17 +1494,6 @@ class FloatingFxLayerState extends State<FloatingFxLayer>
         }),
       ],
     );
-  }
-}
-
-// Helper to avoid a verbose Stack+Positioned.fill everywhere
-class PositionedFill extends StatelessWidget {
-  final List<Widget> children;
-  const PositionedFill({super.key, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(child: Stack(children: children));
   }
 }
 
@@ -1755,4 +1718,351 @@ class _MiniAtomPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MiniAtomPainter oldDelegate) => false;
+}
+
+// ===================== Upgrades Bottom Sheet (Polished) =====================
+class UpgradeBottomSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> upgrades;
+  final double counter;
+  final double costMultiplier;
+  final void Function(int index, int qty, int totalCost) onBuy;
+
+  const UpgradeBottomSheet({
+    super.key,
+    required this.upgrades,
+    required this.counter,
+    required this.costMultiplier,
+    required this.onBuy,
+  });
+
+  @override
+  State<UpgradeBottomSheet> createState() => _UpgradeBottomSheetState();
+}
+
+class _UpgradeBottomSheetState extends State<UpgradeBottomSheet> {
+  String _sort = 'Default'; // Default, Cost, Owned, Type
+
+  @override
+  Widget build(BuildContext context) {
+    // Build a view model for sorting without mutating source order
+    final items = List.generate(widget.upgrades.length, (i) {
+      final u = widget.upgrades[i];
+      return ({
+        'i': i,
+        'label': u['label'],
+        'color': u['color'] as Color,
+        'baseCost': u['baseCost'] as int,
+        'value': u['value'] as double,
+        'count': u['count'] as int,
+        'type': (u['type'] as String), // 'rate' or 'tap'
+      });
+    });
+
+    // Sort visuals
+    switch (_sort) {
+      case 'Cost':
+        items.sort((a, b) {
+          final ac = (a['baseCost'] as int) * pow(widget.costMultiplier, a['count'] as int);
+          final bc = (b['baseCost'] as int) * pow(widget.costMultiplier, b['count'] as int);
+          return (ac).compareTo(bc);
+        });
+        break;
+      case 'Owned':
+        items.sort((b, a) => (a['count'] as int).compareTo(b['count'] as int)); // desc
+        break;
+      case 'Type':
+        items.sort((a, b) => (a['type'] as String).compareTo(b['type'] as String));
+        break;
+      default:
+        // keep original index order
+        break;
+    }
+
+    return Material(
+      color: Colors.grey[900],
+      elevation: 10,
+      child: Column(
+        children: [
+          // Sticky header
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.white12)),
+            ),
+            child: Row(
+              children: [
+                const Text('Upgrades', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                const Text('Sort:', style: TextStyle(color: Colors.white70)),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: _sort,
+                  dropdownColor: Colors.grey[900],
+                  items: const [
+                    DropdownMenuItem(value: 'Default', child: Text('Default')),
+                    DropdownMenuItem(value: 'Cost', child: Text('Cost')),
+                    DropdownMenuItem(value: 'Owned', child: Text('Owned')),
+                    DropdownMenuItem(value: 'Type', child: Text('Type')),
+                  ],
+                  onChanged: (v) => setState(() => _sort = v ?? 'Default'),
+                ),
+              ],
+            ),
+          ),
+
+          // List
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, visualIdx) {
+                final m = items[visualIdx];
+                final index = m['i'] as int;
+                final color = m['color'] as Color;
+                final base = m['baseCost'] as int;
+                final count = m['count'] as int;
+                final type = m['type'] as String;
+                final label = m['label'] as String;
+                final value = m['value'] as double;
+
+                // Visibility & unlock rules (same logic, just clearer)
+                final prevCount = index == 0 ? 8 : (widget.upgrades[index - 1]['count'] as int);
+                final isVisible = index == 0 || prevCount >= 1;
+                final isUnlocked = index == 0 || prevCount >= 8;
+
+                if (!isVisible) {
+                  return const SizedBox.shrink();
+                }
+
+                final costNow = (base * pow(widget.costMultiplier, count)).floor();
+                final canBuy1 = isUnlocked && widget.counter >= costNow;
+
+                // Precompute x10
+                final costs10 = nextCosts(context, base, count, widget.costMultiplier, 10);
+                final total10 = costs10.fold<int>(0, (a, b) => a + b);
+                final canBuy10 = isUnlocked && widget.counter >= total10;
+
+                // Progress toward unlock next tier (visual)
+                int? reqOwnedPrev;
+                int? ownedPrev;
+                if (index + 1 < widget.upgrades.length) {
+                  reqOwnedPrev = 8;
+                  ownedPrev = widget.upgrades[index]['count'] as int; // current one as "prev" for next
+                }
+
+                return _UpgradeTile(
+                  color: color,
+                  label: label,
+                  detail: '+$value/${type == 'rate' ? 's' : 'tap'}',
+                  count: count,
+                  isUnlocked: isUnlocked,
+                  lockReason: index == 0 ? null : 'Buy ${widget.upgrades[index - 1]['label']} ×8',
+                  costNow: costNow,
+                  canBuy1: canBuy1,
+                  canBuy10: canBuy10,
+                  total10: total10,
+                  onBuy1: canBuy1 ? () => widget.onBuy(index, 1, costNow) : null,
+                  onBuy10: canBuy10 ? () => widget.onBuy(index, 10, total10) : null,
+                  nextProgressLabel: (reqOwnedPrev != null && ownedPrev != null)
+                      ? 'Unlock next at $reqOwnedPrev owned · ${ownedPrev.clamp(0, reqOwnedPrev)}/$reqOwnedPrev'
+                      : null,
+                  nextProgressValue: (reqOwnedPrev != null && ownedPrev != null)
+                      ? (ownedPrev / reqOwnedPrev).clamp(0, 1)
+                      : null,
+                  fmt: (context.findAncestorStateOfType<_MyHomePageState>()!._fmtCompact),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<int> nextCosts(BuildContext context, int base, int count, double mult, int n) =>
+      (context.findAncestorStateOfType<_MyHomePageState>()!).nextCosts(base, count, mult, n);
+}
+
+class _UpgradeTile extends StatelessWidget {
+  final Color color;
+  final String label;
+  final String detail; // e.g., +0.2/s or +2.0/tap
+  final int count;
+  final bool isUnlocked;
+  final String? lockReason;
+
+  final int costNow;
+  final bool canBuy1;
+  final bool canBuy10;
+  final int total10;
+
+  final VoidCallback? onBuy1;
+  final VoidCallback? onBuy10;
+
+  final String? nextProgressLabel;
+  final double? nextProgressValue;
+
+  final String Function(num) fmt;
+
+  const _UpgradeTile({
+    required this.color,
+    required this.label,
+    required this.detail,
+    required this.count,
+    required this.isUnlocked,
+    required this.lockReason,
+    required this.costNow,
+    required this.canBuy1,
+    required this.canBuy10,
+    required this.total10,
+    required this.onBuy1,
+    required this.onBuy10,
+    required this.fmt,
+    this.nextProgressLabel,
+    this.nextProgressValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final gradient = LinearGradient(
+      colors: [color.withValues(alpha: 0.22), color.withValues(alpha: 0.06)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
+        boxShadow: const [BoxShadow(blurRadius: 12, color: Colors.black54)],
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Stack(
+        children: [
+          Row(
+            children: [
+              // Accent pill
+              Container(
+                width: 6,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Main info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title + detail
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(label,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(detail, style: const TextStyle(color: Colors.white70)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Cost + Owned
+                    Row(
+                      children: [
+                        Text('Cost: ${fmt(costNow)}',
+                            style: TextStyle(
+                              color: canBuy1 ? Colors.white : Colors.white70,
+                              fontWeight: FontWeight.w600,
+                            )),
+                        const SizedBox(width: 12),
+                        Text('Owned: $count', style: const TextStyle(color: Colors.white70)),
+                      ],
+                    ),
+
+                    // Progress to unlock next tier (optional)
+                    if (nextProgressLabel != null && nextProgressValue != null) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: nextProgressValue!.clamp(0, 1),
+                          minHeight: 6,
+                          backgroundColor: Colors.white12,
+                          valueColor: AlwaysStoppedAnimation<Color>(color.withValues(alpha: 0.9)),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(nextProgressLabel!, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                    ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Action buttons
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    onPressed: onBuy1,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: canBuy1 ? color.withValues(alpha: 0.9) : Colors.white12,
+                      foregroundColor: canBuy1 ? Colors.black : Colors.white54,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: canBuy1 ? 4 : 0,
+                    ),
+                    child: const Text('Buy'),
+                  ),
+                  const SizedBox(height: 6),
+                  Tooltip(
+                    message: 'Tap to buy ×10',
+                    child: ElevatedButton(
+                      onPressed: onBuy10,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: canBuy10 ? Colors.white24 : Colors.white10,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: Text('×10 (${fmt(total10)})', style: const TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Lock overlay
+          if (!isUnlocked)
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.lock, color: Colors.white70),
+                      const SizedBox(width: 8),
+                      Text(lockReason ?? 'Locked',
+                          style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
