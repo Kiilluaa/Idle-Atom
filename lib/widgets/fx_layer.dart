@@ -1,58 +1,88 @@
-// lib/widgets/fx_layer.dart
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/scheduler.dart';
+import 'atom_graphics.dart';
 
-/// Floating particle/text FX layer for tap feedback.
-/// Note: Wrap this with IgnorePointer in your page so it doesn't block taps:
-///   if (showFx) IgnorePointer(ignoring: true, child: FloatingFxLayer(key: _fxKey))
+// ===================== FX TUNING KNOBS =====================
+// Increase to make atoms travel farther sideways/upward.
+const double kAtomDistanceMult = 1.0; // 1.0 = default
+// Increase to make atoms complete their arc faster (shorter duration).
+const double kAtomSpeedMult = 1;    // 1.0 = default
+// Max simultaneous atoms and floating texts (oldest are dropped when capped).
+const int kMaxArcParticles = 24;
+const int kMaxFloatTexts  = 24;
+// Text lifetime in seconds (how long the +X floats/fades).
+const double kTextDuration = 1.0;
+// Atom duration range (seconds) BEFORE speed multiplier is applied.
+const double kAtomDurationMin = 0.70;
+const double kAtomDurationMax = 1.00;
+// Arc parameter ranges (pixels).
+const double kLateralMin = 40;
+const double kLateralMax = 90;
+const double kRiseMin    = 80;
+const double kRiseMax    = 140;
+// Arc bow curvature factor (0..1).
+const double kBowMin = 0.30;
+const double kBowMax = 0.80;
+// MiniAtom size range (logical px).
+const double kMinAtomSize = 14;
+const double kMaxAtomSize = 22;
+
+// ===================== Floating FX layer =====================
 class FloatingFxLayer extends StatefulWidget {
   const FloatingFxLayer({super.key});
 
   @override
-  FloatingFxLayerState createState() => FloatingFxLayerState();
+  State<FloatingFxLayer> createState() => FloatingFxLayerState();
 }
 
 class FloatingFxLayerState extends State<FloatingFxLayer>
     with SingleTickerProviderStateMixin {
-  Ticker? _ticker;
-  double _time = 0.0; // seconds
+  Ticker? _fxTicker;
+  double _fxTime = 0.0; // seconds
 
   final Random _rng = Random();
-  final List<_ArcParticle> _arcParticles = [];
-  final List<_FloatText> _floatTexts = [];
+  final List<_ArcParticle> _arc = [];
+  final List<_FloatText> _texts = [];
 
   @override
   void initState() {
     super.initState();
-    _ticker ??= createTicker((elapsed) {
+    _fxTicker ??= createTicker((elapsed) {
       if (!mounted) return;
       setState(() {
-        _time = elapsed.inMicroseconds / 1e6;
-        _arcParticles.removeWhere((p) => _time - p.t0 >= p.duration);
-        _floatTexts.removeWhere((t) => _time - t.t0 >= t.duration);
+        _fxTime = elapsed.inMicroseconds / 1e6;
+        _arc.removeWhere((p) => _fxTime - p.t0 >= p.duration);
+        _texts.removeWhere((t) => _fxTime - t.t0 >= t.duration);
       });
     })..start();
   }
 
   @override
   void dispose() {
-    _ticker?.dispose();
+    _fxTicker?.dispose();
     super.dispose();
   }
 
-  /// Call from parent via global key to spawn one FX at a local coordinate.
+  /// Spawn a MiniAtom that travels along a bowed quadratic arc in a random
+  /// left/right direction, and a plain "+X" label that rises and fades out.
   void spawnTapFx(Offset localPos, String text) {
-    final now = _time;
+    final now = _fxTime;
 
     final dirRight = _rng.nextBool() ? 1.0 : -1.0;
-    final lateral = _lerp(40, 90, _rng.nextDouble());
-    final rise = _lerp(80, 140, _rng.nextDouble());
-    final dur = _lerp(0.7, 1.0, _rng.nextDouble());
-    final size = _lerp(14, 22, _rng.nextDouble());
-    final bow = _lerp(0.3, 0.8, _rng.nextDouble());
+    final lateral = lerpDouble(kLateralMin, kLateralMax, _rng.nextDouble())! * kAtomDistanceMult;
+    final rise    = lerpDouble(kRiseMin,    kRiseMax,    _rng.nextDouble())! * kAtomDistanceMult;
+    final rawDur  = lerpDouble(kAtomDurationMin, kAtomDurationMax, _rng.nextDouble())!;
+    final dur     = (rawDur / kAtomSpeedMult).clamp(0.15, 5.0);
+    final size    = lerpDouble(kMinAtomSize, kMaxAtomSize, _rng.nextDouble())!;
+    final bow     = lerpDouble(kBowMin, kBowMax, _rng.nextDouble())!;
 
-    _arcParticles.add(
+    // Cap lists to avoid unbounded growth when spam-tapping
+    while (_arc.length >= kMaxArcParticles) {_arc.removeAt(0);}
+    while (_texts.length >= kMaxFloatTexts) {_texts.removeAt(0);}
+
+    _arc.add(
       _ArcParticle(
         start: localPos,
         control: localPos + Offset(dirRight * lateral * 0.5, -rise * bow),
@@ -63,109 +93,39 @@ class FloatingFxLayerState extends State<FloatingFxLayer>
       ),
     );
 
-    _floatTexts.add(
+    _texts.add(
       _FloatText(
         start: localPos + const Offset(0, -8),
         end: localPos + const Offset(0, -90),
         t0: now,
-        duration: 1.0,
+        duration: kTextDuration,
         text: text,
       ),
     );
   }
 
-  double _lerp(double a, double b, double t) => a + (b - a) * t;
-
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Mini atoms (arc)
-        ..._arcParticles.map((p) {
-          final t = ((_time - p.t0) / p.duration).clamp(0.0, 1.0);
-          Offset lerpQ(Offset a, Offset b, double t) =>
-              Offset(a.dx + (b.dx - a.dx) * t, a.dy + (b.dy - a.dy) * t);
-          final q1 = lerpQ(p.start, p.control, t);
-          final q2 = lerpQ(p.control, p.end, t);
-          final pos = lerpQ(q1, q2, t);
-          final opacity = (1.0 - t);
-          return Positioned(
-            left: pos.dx,
-            top: pos.dy,
-            child: Opacity(
-              opacity: opacity,
-              child: Transform.translate(
-                offset: const Offset(-10, -10),
-                child: const _MiniAtomIcon(size: 18),
-              ),
-            ),
-          );
-        }),
-
-        // Floating +X text (compact)
-        ..._floatTexts.map((ft) {
-          final t = ((_time - ft.t0) / ft.duration).clamp(0.0, 1.0);
-          final dx = _lerp(ft.start.dx, ft.end.dx, t);
-          final dy = _lerp(ft.start.dy, ft.end.dy, t);
-          final opacity = (1.0 - t);
-          return Positioned(
-            left: dx,
-            top: dy,
-            child: Opacity(
-              opacity: opacity,
-              child: Transform.translate(
-                offset: const Offset(-8, -8),
-                child: Text(
-                  ft.text,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    shadows: [
-                      Shadow(blurRadius: 6, color: Colors.black, offset: Offset(0, 1)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-// Simple visual for FX atom (not the main painter)
-class _MiniAtomIcon extends StatelessWidget {
-  const _MiniAtomIcon({required this.size});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [const Color(0xFFB388FF).withValues(alpha: 1), const Color(0xFF7C4DFF).withValues(alpha: 1)],
-        ),
-        boxShadow: const [
-          BoxShadow(color: Colors.white24, blurRadius: 3, spreadRadius: 0.5),
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          for (final p in _arc) _ArcWidget(p: p, time: _fxTime),
+          for (final ft in _texts) _FloatTextWidget(t: ft, time: _fxTime),
         ],
       ),
     );
   }
 }
 
-// FX model types
+// ---- Widgets / Models ----
+
 class _ArcParticle {
   final Offset start;
   final Offset control;
   final Offset end;
-  final double t0;       // spawn time in seconds
+  final double t0;       // spawn time (seconds)
   final double duration; // seconds
-  final double size;     // logical px
+  final double size;     // MiniAtom size
   _ArcParticle({
     required this.start,
     required this.control,
@@ -176,11 +136,37 @@ class _ArcParticle {
   });
 }
 
+class _ArcWidget extends StatelessWidget {
+  const _ArcWidget({required this.p, required this.time});
+  final _ArcParticle p;
+  final double time;
+
+  @override
+  Widget build(BuildContext context) {
+    double t = ((time - p.t0) / p.duration).clamp(0.0, 1.0);
+
+    Offset lerpQ(Offset a, Offset b, double t) =>
+        Offset(a.dx + (b.dx - a.dx) * t, a.dy + (b.dy - a.dy) * t);
+    final q1 = lerpQ(p.start, p.control, t);
+    final q2 = lerpQ(p.control, p.end, t);
+    final pos = lerpQ(q1, q2, t);
+
+    return Positioned(
+      left: pos.dx,
+      top: pos.dy,
+      child: Transform.translate(
+        offset: Offset(-p.size / 2, -p.size / 2),
+        child: MiniAtom(size: p.size),
+      ),
+    );
+  }
+}
+
 class _FloatText {
   final Offset start;
   final Offset end;
-  final double t0;       // spawn time in seconds
-  final double duration; // seconds
+  final double t0;
+  final double duration;
   final String text;
   _FloatText({
     required this.start,
@@ -189,4 +175,38 @@ class _FloatText {
     required this.duration,
     required this.text,
   });
+}
+
+class _FloatTextWidget extends StatelessWidget {
+  const _FloatTextWidget({required this.t, required this.time});
+  final _FloatText t;
+  final double time;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = ((time - t.t0) / t.duration).clamp(0.0, 1.0);
+    final x = lerpDouble(t.start.dx, t.end.dx, p)!;
+    final y = lerpDouble(t.start.dy, t.end.dy, p)!;
+    final opacity = (1.0 - p).clamp(0.0, 1.0);
+
+    return Positioned(
+      left: x,
+      top: y,
+      child: Opacity(
+        opacity: opacity,
+        child: Transform.translate(
+          offset: const Offset(-8, -8),
+          child: Text(
+            t.text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              shadows: [Shadow(blurRadius: 6, color: Colors.black, offset: Offset(0, 1))],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
