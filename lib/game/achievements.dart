@@ -56,7 +56,7 @@ class Achievements {
     Achievement(id: 'combo_6', title: 'Capitalist Elite',  desc: '100K Taps, 100 Upgrades, 10M Currency',category: 'Combo', metric: 'combo'),
   ];
 
-  /// Returns a set of **newly** unlocked achievement IDs (difference from alreadyUnlocked).
+  // Returns a set of **newly** unlocked achievement IDs (difference from alreadyUnlocked).
   static Set<String> check({
     required double totalCurrency,
     required int totalTaps,

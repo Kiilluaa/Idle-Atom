@@ -2,7 +2,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
-/// Small glassy panel showing rate and tap stats.
+// Small glassy panel showing rate and tap stats.
 class TopMiniPanel extends StatelessWidget {
   const TopMiniPanel({super.key, required this.rate, required this.tap});
   final String rate;

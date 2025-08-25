@@ -1,9 +1,9 @@
 // lib/game/persistence.dart
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Simple persistence helpers that decouple storage from your UI.
-/// You can keep using your current state shape and call these helpers
-/// to load/save a snapshot map.
+// Simple persistence helpers that decouple storage from your UI.
+// You can keep using your current state shape and call these helpers
+// to load/save a snapshot map.
 class Persistence {
   // Keys
   static const _kCounter = 'counter';
@@ -21,8 +21,8 @@ class Persistence {
   static const _kLastSavedMillis = 'lastSavedMillis';
   static String _kUpgradeCount(int i) => 'upgrade_count_$i';
 
-  /// Loads a snapshot. You must pass [numUpgrades] so counts can be read back.
-  /// Returns a map with the same field names you already use.
+  // Loads a snapshot. You must pass [numUpgrades] so counts can be read back.
+  // Returns a map with the same field names you already use.
   static Future<Map<String, dynamic>> load({required int numUpgrades}) async {
     final prefs = await SharedPreferences.getInstance();
     final map = <String, dynamic>{};
@@ -51,7 +51,7 @@ class Persistence {
     return map;
   }
 
-  /// Saves a snapshot. Provide [upgradeCounts] matching your upgrades list length.
+  // Saves a snapshot. Provide [upgradeCounts] matching your upgrades list length.
   static Future<void> save({
     required double counter,
     required double tapValue,
@@ -86,7 +86,7 @@ class Persistence {
     await prefs.setInt(_kLastSavedMillis, nowMillis);
   }
 
-  /// Helper to clear all saved data (same as your reset button).
+  // Helper to clear all saved data (same as your reset button).
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

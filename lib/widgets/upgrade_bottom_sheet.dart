@@ -2,6 +2,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../game/economy.dart';
+import '../utils/format.dart'; // fmtTight
 
 class UpgradeBottomSheet extends StatefulWidget {
   const UpgradeBottomSheet({
@@ -137,10 +138,23 @@ class _UpgradeBottomSheetState extends State<UpgradeBottomSheet> {
                   ownedPrev = widget.upgrades[index]['count'] as int;
                 }
 
-                // Detail string reflects type
+                // Detail string reflects stepped additive output
                 String detail;
-                if (type == 'rate') {
-                  detail = '+$value/s';
+                String? nextHint;
+
+                if (type == 'rate' || type == 'tap') {
+                  final unit = type == 'rate' ? '/s' : '/tap';
+                  final double baseVal = (value as double?) ?? 0.0;
+
+                  // Current per-unit value after step-ups
+                  final perNow = baseVal * valueStepMultiplier(count);
+
+                  // Value per unit if you buy one more now
+                  final perNext = baseVal * valueStepMultiplier(count + 1);
+
+                  detail = '+${fmtTight(perNow, maxDecimals: 2)}$unit';
+                  final nextAt = nextStepThreshold(count);
+                  nextHint = 'Next: +${fmtTight(perNext, maxDecimals: 2)}$unit at $nextAt owned';
                 } else if (type == 'tapx') {
                   final mult = (m['mult'] as double?) ?? 1.10;
                   detail = '×${mult.toStringAsFixed(2)} tap';
@@ -148,13 +162,14 @@ class _UpgradeBottomSheetState extends State<UpgradeBottomSheet> {
                   final mult = (m['mult'] as double?) ?? 1.10;
                   detail = '×${mult.toStringAsFixed(2)} /s';
                 } else {
-                  detail = '+$value/tap';
+                  detail = '+${value ?? 0}';
                 }
 
                 return _UpgradeTile(
                   color: color,
                   label: label,
                   detail: detail,
+                  nextHint: nextHint,
                   count: count,
                   isUnlocked: isUnlocked,
                   lockReason: index == 0 ? null : 'Buy ${widget.upgrades[index - 1]['label']} ×8',
@@ -198,11 +213,13 @@ class _UpgradeTile extends StatelessWidget {
     required this.fmt,
     this.nextProgressLabel,
     this.nextProgressValue,
+    this.nextHint,
   });
 
   final Color color;
   final String label;
   final String detail; // e.g., +0.2/s or ×1.15 tap
+  final String? nextHint;
   final int count;
   final bool isUnlocked;
   final String? lockReason;
@@ -266,6 +283,13 @@ class _UpgradeTile extends StatelessWidget {
                         Text(detail, style: const TextStyle(color: Colors.white70)),
                       ],
                     ),
+                    if (nextHint != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        nextHint!,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
                     const SizedBox(height: 6),
 
                     // Cost + Owned

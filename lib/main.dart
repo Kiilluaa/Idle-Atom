@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'game/game_state.dart';
 import 'game/upgrades.dart';
 import 'game/persistence.dart';
+import 'game/achievements.dart'; // ⬅️ for title lookup
 
 // Utils & widgets
 import 'utils/format.dart';
@@ -23,7 +24,7 @@ void main() {
   runApp(const MyApp());
 }
 
-/// Single MaterialApp so tests can pump `MyApp()`.
+// Single MaterialApp so tests can pump `MyApp()`.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -42,7 +43,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// Root that owns the GameState and shows the home UI once loaded.
+// Root that owns the GameState and shows the home UI once loaded.
 class _Root extends StatefulWidget {
   const _Root({super.key});
   @override
@@ -101,6 +102,108 @@ class _MyHomePageState extends State<MyHomePage> {
   // FX layer control
   final GlobalKey<fx.FloatingFxLayerState> _fxKey = GlobalKey<fx.FloatingFxLayerState>();
   final GlobalKey _stackKey = GlobalKey();
+
+  // Throttle for the "Game saved" banner
+  DateTime? _lastSaveToastAt;
+
+  // Track GameState change versions so we can react once per tick
+  int _lastSeenSaveVersion = 0;
+  int _lastSeenUnlockVersion = 0; // ⬅️ track achievement unlocks
+
+  @override
+  void initState() {
+    super.initState();
+    _lastSeenSaveVersion = widget.game.saveVersion;
+    _lastSeenUnlockVersion = widget.game.unlockVersion; // ⬅️ init
+    widget.game.addListener(_onGameEvent);
+  }
+
+  @override
+  void dispose() {
+    widget.game.removeListener(_onGameEvent);
+    super.dispose();
+  }
+
+  // React to GameState events (autosave + achievement popups)
+  void _onGameEvent() {
+    if (!mounted) return;
+    final g = widget.game;
+
+    // ===== Autosave toast =====
+    if (g.saveVersion != _lastSeenSaveVersion) {
+      _lastSeenSaveVersion = g.saveVersion;
+
+      // Only toast for autosaves; manual saves use _save()
+      if (g.lastSaveWasAuto) {
+        final now = DateTime.now();
+        if (_lastSaveToastAt == null ||
+            now.difference(_lastSaveToastAt!) >= const Duration(seconds: 3)) {
+          _lastSaveToastAt = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Game saved'),
+              duration: Duration(milliseconds: 300),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+
+    // ===== Achievement popup =====
+    if (g.unlockVersion != _lastSeenUnlockVersion) {
+      _lastSeenUnlockVersion = g.unlockVersion;
+
+      final id = g.lastUnlockedId;
+      if (id != null) {
+        // Find achievement title
+        String title = id;
+        try {
+          final a = Achievements.all.firstWhere((x) => x.id == id);
+          title = a.title;
+        } catch (_) {
+          // keep id as fallback
+        }
+
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('Achievement unlocked: $title'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              action: SnackBarAction(
+                label: 'VIEW',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => AchievementsPage(unlocked: g.unlocked)),
+                  );
+                },
+              ),
+            ),
+          );
+      }
+    }
+  }
+
+  // Manual save helper with toast and throttling
+  Future<void> _save({bool silent = false}) async {
+    await widget.game.save(silent: silent);
+    if (!mounted || silent) return;
+
+    final now = DateTime.now();
+    if (_lastSaveToastAt != null && now.difference(_lastSaveToastAt!) < const Duration(seconds: 3)) {
+      return;
+    }
+    _lastSaveToastAt = now;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Game saved'),
+        duration: Duration(milliseconds: 300),
+        behavior: SnackBarBehavior.floating),
+    );
+  }
 
   Future<void> _openSettings() async {
     await showModalBottomSheet(
@@ -168,7 +271,7 @@ class _MyHomePageState extends State<MyHomePage> {
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.save), onPressed: () => g.save()),
+          IconButton(icon: const Icon(Icons.save), onPressed: () => _save()),
         ],
       ),
       body: Stack(
@@ -176,14 +279,26 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           Background(style: g.backgroundStyle),
 
-          // ====== Top mini panel (Rate + Tap) ======
+          // ====== Top mini panel + Buff overlay (when active) ======
           Positioned(
             top: 12,
             left: 12,
             right: 12,
-            child: TopMiniPanel(
-              rate: '${fmtCompact(g.passiveRate)}/s',
-              tap: fmtCompact(g.tapValue),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TopMiniPanel(
+                  rate: '${fmtTight(g.currentPassiveRate, maxDecimals: 2)}/s',
+                  // show boosted value live
+                  tap: fmtNumber(g.currentTapValue, maxDecimals: 2),
+                ),
+                const SizedBox(height: 6),
+                if (g.isBuffActive && g.buffRemainingMs > 0 && g.buffTotalMs > 0)
+                  _BuffOverlay(
+                    remainingMs: g.buffRemainingMs,
+                    totalMs: g.buffTotalMs,
+                  ),
+              ],
             ),
           ),
 
@@ -195,7 +310,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 if (g.reduceAnimations) return;
                 final local = _globalToStackLocal(details.globalPosition);
                 if (local != null) {
-                  _fxKey.currentState?.spawnTapFx(local, '+${fmtCompact(g.tapValue)}');
+                  _fxKey.currentState?.spawnTapFx(local, '+${fmtNumber(g.currentTapValue, maxDecimals: 2)}');
                 }
               },
               onTapUp: (_) {
@@ -221,7 +336,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: fx.FloatingFxLayer(key: _fxKey),
             ),
 
-          // ====== Bottom spectrometer (Currency only) ======
+          // ====== Bottom spectrometer (Currency + Stats) ======
           Positioned.fill(
             child: LayoutBuilder(
               builder: (context, c) {
@@ -265,10 +380,15 @@ class _MyHomePageState extends State<MyHomePage> {
               costMultiplier: 1.15,
               fmtCompact: fmtCompact,
               onBuy: (index, qty, totalCost) {
-                setState(() {
-                  g.counter -= totalCost;
-                });
-                g.buyUpgrade(index, qty);
+                // Let GameState own pricing and deduction to avoid drift/double-charge.
+                final ok = g.buyUpgrade(index, qty);
+                if (ok) {
+                  setState(() {});
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Not enough currency')),
+                  );
+                }
               },
             ),
           ),
@@ -318,4 +438,85 @@ class _MyHomePageState extends State<MyHomePage> {
 
   double _clampDouble(double v, double lo, double hi) =>
       v < lo ? lo : (v > hi ? hi : v);
+}
+
+// ===================== PRIVATE WIDGET: Buff Overlay =====================
+
+class _BuffOverlay extends StatelessWidget {
+  const _BuffOverlay({required this.remainingMs, required this.totalMs});
+
+  final int remainingMs;
+  final int totalMs;
+
+  @override
+  Widget build(BuildContext context) {
+    final double ratio =
+        (totalMs <= 0) ? 0.0 : (remainingMs / totalMs).clamp(0.0, 1.0);
+    final double secsLeft = remainingMs / 1000.0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E28).withValues(alpha: 0.85),
+        border: Border.all(color: Colors.white24),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Top line with text
+          Row(
+            children: [
+              const Icon(Icons.bolt, size: 16, color: Colors.amber),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '×10 BOOST — ${secsLeft.toStringAsFixed(1)}s left',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Progress bar that shrinks from right to left
+          SizedBox(
+            height: 6,
+            child: Stack(
+              children: [
+                // Background track
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                // Right-aligned shrinking fill
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerRight,
+                      widthFactor: ratio, // 1.0 -> full, 0.0 -> empty
+                      child: Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

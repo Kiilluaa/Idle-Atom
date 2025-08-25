@@ -1,7 +1,7 @@
 // lib/utils/debouncer.dart
 import 'dart:async';
 
-/// Simple Debouncer utility to throttle actions (e.g., save notifications).
+// Simple Debouncer utility to throttle actions (e.g., save notifications).
 class Debouncer {
   Debouncer({required this.duration});
   final Duration duration;

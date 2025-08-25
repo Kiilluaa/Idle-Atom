@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-/// Main animated atom tap target
+// Main animated atom tap target
 class AtomGraphic extends StatefulWidget {
   const AtomGraphic({super.key, required this.size, this.reduceAnimations = false});
   final double size;
@@ -135,7 +135,7 @@ class _AtomPainter extends CustomPainter {
       oldDelegate.timeSeconds != timeSeconds || oldDelegate.reduce != reduce;
 }
 
-/// MiniAtom painter used elsewhere as a static graphic
+// MiniAtom painter used elsewhere as a static graphic
 class MiniAtom extends StatelessWidget {
   const MiniAtom({super.key, required this.size});
   final double size;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Strongly-typed upgrade model.
+// Strongly-typed upgrade model.
 class Upgrade {
   final String label;
   final Color color;
@@ -34,7 +34,7 @@ class Upgrade {
   );
 }
 
-/// Factory to create a fresh list (with zeroed counts)
+// Factory to create a fresh list (with zeroed counts)
 List<Upgrade> createDefaultUpgrades() => [
   Upgrade(label: 'Ion Trap',         color: Colors.teal,   baseCost: 50,      type: 'rate', costMult: 1.13, value: 0.1),
   Upgrade(label: 'Fusion Chamber',   color: Colors.orange, baseCost: 225,     type: 'rate', costMult: 1.14, value: 0.2),

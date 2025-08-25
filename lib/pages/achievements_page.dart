@@ -4,7 +4,7 @@ import '../game/achievements.dart'; // uses Achievements.all
 class AchievementsPage extends StatelessWidget {
   const AchievementsPage({super.key, required this.unlocked});
 
-  /// Set of unlocked achievement IDs (from persistence / game state).
+  // Set of unlocked achievement IDs (from persistence / game state).
   final Set<String> unlocked;
 
   @override

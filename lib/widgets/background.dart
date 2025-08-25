@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Simple, reusable background gradient widget that fills all available space.
-/// Usage: const Background(style: 0|1|2)
+// Simple, reusable background gradient widget that fills all available space.
+// Usage: const Background(style: 0|1|2)
 class Background extends StatelessWidget {
   const Background({super.key, required this.style});
   final int style;
